@@ -221,7 +221,13 @@ export default function Signup() {
         >
           {/* Back Button */}
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back()
+              } else {
+                router.replace('/role-selection')
+              }
+            }}
             className="mb-4 self-start"
           >
             <Ionicons name="arrow-back" size={24} color={roleInfo.color} />

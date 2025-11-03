@@ -1,11 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { View, Text, ActivityIndicator, Image } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useRootNavigationState } from 'expo-router'
 import { useAuthStore } from '@/stores/authStore'
 
 export default function Index() {
   const router = useRouter()
+  const rootNavigationState = useRootNavigationState()
   const { isAuthenticated, userData, isLoading } = useAuthStore()
+  const navigationAttemptedRef = useRef(false)
 
   useEffect(() => {
     if (!isLoading) {
