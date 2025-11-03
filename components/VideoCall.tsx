@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { View, Text, TouchableOpacity, Alert, Dimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { Camera, CameraType } from 'expo-camera'
+import { CameraView, useCameraPermissions } from 'expo-camera'
 import { Audio } from 'expo-av'
 import { useCallStore, CallData } from '@/stores/callStore'
 
@@ -17,12 +17,11 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null)
   const [hasAudioPermission, setHasAudioPermission] = useState<boolean | null>(null)
-  const [cameraType, setCameraType] = useState(CameraType.front)
+  const [cameraType, setCameraType] = useState<'front' | 'back'>('front')
+  const [permission, requestPermission] = useCameraPermissions()
   const { endCall } = useCallStore()
   const intervalRef = useRef<NodeJS.Timeout>()
-  const cameraRef = useRef<Camera>(null)
 
   const { width, height } = Dimensions.get('window')
 
@@ -30,9 +29,10 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
     // Request permissions and start call duration timer
     const requestPermissions = async () => {
       try {
-        // Request camera permission
-        const cameraStatus = await Camera.requestCameraPermissionsAsync()
-        setHasCameraPermission(cameraStatus.status === 'granted')
+        // Request camera permission if not granted
+        if (!permission?.granted) {
+          await requestPermission()
+        }
 
         // Request microphone permission
         const audioStatus = await Audio.requestPermissionsAsync()
@@ -66,7 +66,7 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
         clearInterval(intervalRef.current)
       }
     }
-  }, [])
+  }, [permission, requestPermission])
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -119,14 +119,14 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
 
   const switchCamera = () => {
     setCameraType(current => 
-      current === CameraType.back ? CameraType.front : CameraType.back
+      current === 'back' ? 'front' : 'back'
     )
   }
 
   const otherPersonName = userType === 'patient' ? call.doctorName : call.patientName
 
   // Show permission request screen if permissions not granted
-  if (hasCameraPermission === null || hasAudioPermission === null) {
+  if (permission === null || hasAudioPermission === null) {
     return (
       <View className="flex-1 bg-black items-center justify-center">
         <Text className="text-white text-lg mb-4">Requesting permissions...</Text>
@@ -134,7 +134,7 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
     )
   }
 
-  if (hasCameraPermission === false || hasAudioPermission === false) {
+  if (!permission.granted || hasAudioPermission === false) {
     return (
       <View className="flex-1 bg-black items-center justify-center px-6">
         <Ionicons name="warning" size={64} color="#ef4444" />
@@ -185,18 +185,16 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
         </View>
 
         {/* Local Video (Picture in Picture) - Only show for video calls */}
-        {call.callType === 'video' && hasCameraPermission && (
+        {call.callType === 'video' && permission?.granted && (
           <View className="absolute top-12 right-4 w-32 h-40 rounded-lg overflow-hidden">
             {isVideoOff ? (
               <View className="flex-1 bg-gray-600 items-center justify-center">
                 <Ionicons name="videocam-off" size={24} color="#ffffff" />
               </View>
             ) : (
-              <Camera
-                ref={cameraRef}
+              <CameraView
                 style={{ flex: 1 }}
-                type={cameraType}
-                ratio="16:9"
+                facing={cameraType}
               />
             )}
           </View>
@@ -257,7 +255,7 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
           </TouchableOpacity>
 
           {/* Camera Switch Button - Only show for video calls when camera is on */}
-          {call.callType === 'video' && !isVideoOff && hasCameraPermission && (
+          {call.callType === 'video' && !isVideoOff && permission?.granted && (
             <TouchableOpacity
               onPress={switchCamera}
               className="w-16 h-16 rounded-full items-center justify-center bg-gray-600"
