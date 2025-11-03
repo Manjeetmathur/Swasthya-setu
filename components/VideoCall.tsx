@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { View, Text, TouchableOpacity, Alert, Dimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
+import { Camera, CameraType } from 'expo-camera'
+import { Audio } from 'expo-av'
 import { useCallStore, CallData } from '@/stores/callStore'
 
 interface VideoCallProps {
@@ -15,12 +17,45 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null)
+  const [hasAudioPermission, setHasAudioPermission] = useState<boolean | null>(null)
+  const [cameraType, setCameraType] = useState(CameraType.front)
   const { endCall } = useCallStore()
   const intervalRef = useRef<NodeJS.Timeout>()
+  const cameraRef = useRef<Camera>(null)
 
   const { width, height } = Dimensions.get('window')
 
   useEffect(() => {
+    // Request permissions and start call duration timer
+    const requestPermissions = async () => {
+      try {
+        // Request camera permission
+        const cameraStatus = await Camera.requestCameraPermissionsAsync()
+        setHasCameraPermission(cameraStatus.status === 'granted')
+
+        // Request microphone permission
+        const audioStatus = await Audio.requestPermissionsAsync()
+        setHasAudioPermission(audioStatus.status === 'granted')
+
+        // Configure audio session for calls
+        if (audioStatus.status === 'granted') {
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: false,
+            staysActiveInBackground: true,
+          })
+        }
+      } catch (error) {
+        console.error('Error requesting permissions:', error)
+        Alert.alert('Permission Error', 'Failed to request camera and microphone permissions')
+      }
+    }
+
+    requestPermissions()
+
     // Start call duration timer
     intervalRef.current = setInterval(() => {
       setCallDuration(prev => prev + 1)
@@ -62,17 +97,62 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
     }
   }
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted)
-    // Here you would integrate with actual video calling SDK
+  const toggleMute = async () => {
+    try {
+      setIsMuted(!isMuted)
+      // Configure audio based on mute state
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: !isMuted,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+        staysActiveInBackground: true,
+      })
+    } catch (error) {
+      console.error('Error toggling mute:', error)
+    }
   }
 
   const toggleVideo = () => {
     setIsVideoOff(!isVideoOff)
-    // Here you would integrate with actual video calling SDK
+  }
+
+  const switchCamera = () => {
+    setCameraType(current => 
+      current === CameraType.back ? CameraType.front : CameraType.back
+    )
   }
 
   const otherPersonName = userType === 'patient' ? call.doctorName : call.patientName
+
+  // Show permission request screen if permissions not granted
+  if (hasCameraPermission === null || hasAudioPermission === null) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center">
+        <Text className="text-white text-lg mb-4">Requesting permissions...</Text>
+      </View>
+    )
+  }
+
+  if (hasCameraPermission === false || hasAudioPermission === false) {
+    return (
+      <View className="flex-1 bg-black items-center justify-center px-6">
+        <Ionicons name="warning" size={64} color="#ef4444" />
+        <Text className="text-white text-xl font-semibold mt-4 text-center">
+          Camera and Microphone Access Required
+        </Text>
+        <Text className="text-gray-300 text-center mt-2 mb-6">
+          Please enable camera and microphone permissions in your device settings to join the video call.
+        </Text>
+        <TouchableOpacity
+          onPress={handleEndCall}
+          className="bg-red-600 px-6 py-3 rounded-lg"
+        >
+          <Text className="text-white font-semibold">End Call</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
 
   return (
     <View className="flex-1 bg-black">
@@ -105,16 +185,19 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
         </View>
 
         {/* Local Video (Picture in Picture) - Only show for video calls */}
-        {call.callType === 'video' && (
-          <View className="absolute top-12 right-4 w-32 h-40 bg-gray-600 rounded-lg overflow-hidden">
+        {call.callType === 'video' && hasCameraPermission && (
+          <View className="absolute top-12 right-4 w-32 h-40 rounded-lg overflow-hidden">
             {isVideoOff ? (
-              <View className="flex-1 items-center justify-center">
+              <View className="flex-1 bg-gray-600 items-center justify-center">
                 <Ionicons name="videocam-off" size={24} color="#ffffff" />
               </View>
             ) : (
-              <View className="flex-1 items-center justify-center">
-                <Text className="text-white text-xs">You</Text>
-              </View>
+              <Camera
+                ref={cameraRef}
+                style={{ flex: 1 }}
+                type={cameraType}
+                ratio="16:9"
+              />
             )}
           </View>
         )}
@@ -134,7 +217,7 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
 
       {/* Controls */}
       <View className="bg-black/80 p-6 pb-12">
-        <View className="flex-row justify-center items-center space-x-8">
+        <View className="flex-row justify-center items-center space-x-6">
           {/* Mute Button */}
           <TouchableOpacity
             onPress={toggleMute}
@@ -149,14 +232,6 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
             />
           </TouchableOpacity>
 
-          {/* End Call Button */}
-          <TouchableOpacity
-            onPress={handleEndCall}
-            className="w-20 h-20 bg-red-600 rounded-full items-center justify-center"
-          >
-            <Ionicons name="call" size={32} color="#ffffff" />
-          </TouchableOpacity>
-
           {/* Video Toggle Button - Only show for video calls */}
           {call.callType === 'video' && (
             <TouchableOpacity
@@ -167,6 +242,28 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
             >
               <Ionicons 
                 name={isVideoOff ? "videocam-off" : "videocam"} 
+                size={24} 
+                color="#ffffff" 
+              />
+            </TouchableOpacity>
+          )}
+
+          {/* End Call Button */}
+          <TouchableOpacity
+            onPress={handleEndCall}
+            className="w-20 h-20 bg-red-600 rounded-full items-center justify-center"
+          >
+            <Ionicons name="call" size={32} color="#ffffff" />
+          </TouchableOpacity>
+
+          {/* Camera Switch Button - Only show for video calls when camera is on */}
+          {call.callType === 'video' && !isVideoOff && hasCameraPermission && (
+            <TouchableOpacity
+              onPress={switchCamera}
+              className="w-16 h-16 rounded-full items-center justify-center bg-gray-600"
+            >
+              <Ionicons 
+                name="camera-reverse" 
                 size={24} 
                 color="#ffffff" 
               />
