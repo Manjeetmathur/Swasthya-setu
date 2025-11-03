@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { View, Text, ActivityIndicator } from 'react-native'
+import { View, Text, ActivityIndicator, Image } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -34,6 +34,11 @@ export default function Index() {
 
   return (
     <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">
+      <Image 
+        source={require('@/logo.png')} 
+        style={{ width: 120, height: 120, marginBottom: 24 }}
+        resizeMode="contain"
+      />
       <ActivityIndicator size="large" color="#2563eb" />
       <Text className="mt-4 text-gray-600 dark:text-gray-400">Loading...</Text>
     </View>
