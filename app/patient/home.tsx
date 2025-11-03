@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
@@ -37,6 +37,8 @@ export default function PatientHome() {
   const router = useRouter()
   const { userData, logout } = useAuthStore()
   const { appointments, subscribeToAppointments, isLoading } = useAppointmentsStore()
+  const { initiateCall, currentCall, setCurrentCall, subscribeToIncomingCalls } = useCallStore()
+  const { activeAlert, cancelEmergency } = useEmergencyStore()
   const [refreshing, setRefreshing] = useState(false)
   const [showDoctorDialog, setShowDoctorDialog] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
@@ -83,7 +85,7 @@ export default function PatientHome() {
             try {
               await cancelEmergency(activeAlert.id)
               Alert.alert('Success', 'Emergency alert cancelled')
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'Failed to cancel emergency alert')
             }
           }
