@@ -48,6 +48,7 @@ export default function ServicesSection({
           {t('home.ai_health_assistant')}
         </Text>
 
+        <View className="gap-3">
         <View className="flex-row gap-3">
           <TouchableOpacity
             className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-800"
@@ -87,6 +88,7 @@ export default function ServicesSection({
               {t('home.wellness_advice')}
             </Text>
           </TouchableOpacity>
+          </View>
         </View>
       </View>
 

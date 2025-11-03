@@ -451,6 +451,65 @@ export default function PatientHome() {
 
           <QuickActionsSection onHospitalSelect={handleHospitalPress} />
 
+          {/* AIScan and MediMind Section */}
+          <View className="mb-6">
+            <View className="gap-3">
+              <TouchableOpacity
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-orange-400 dark:border-orange-600"
+                onPress={() => router.push('/patient/nutri-scan')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="scan" size={28} color="#f97316" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-gray-900 dark:text-white font-bold text-base">
+                      AIScan
+                    </Text>
+                    <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+                      Scan food labels & medicine packets • Detect allergens • Side effects
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-purple-400 dark:border-purple-600"
+                onPress={() => router.push('/patient/skin-rash')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="medical" size={28} color="#a855f7" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-gray-900 dark:text-white font-bold text-base">
+                      Skin Rash Detection
+                    </Text>
+                    <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+                      AI dermatology analysis • Identify conditions • Get recommendations
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-purple-400 dark:border-purple-600"
+                onPress={() => router.push('/patient/medimind')}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="mic" size={28} color="#a855f7" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-gray-900 dark:text-white font-bold text-base">
+                      MediMind
+                    </Text>
+                    <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+                      Voice therapy • Detect depression • Connect to therapist
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <ServicesSection
             activeAlert={activeAlert}
             onCancelEmergency={handleCancelEmergency}

@@ -125,6 +125,27 @@ export default function PatientLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="nutri-scan"
+        options={{
+          title: 'AIScan',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="scan" size={size} color={color} />
+          )
+        }}
+      />
+      <Tabs.Screen
+        name="medimind"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="skin-rash"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   )
 }
