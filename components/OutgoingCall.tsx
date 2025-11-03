@@ -2,22 +2,22 @@ import { useState, useEffect, useRef } from 'react'
 import { View, Text, TouchableOpacity, Modal, Alert, Animated, ActivityIndicator, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Audio } from 'expo-av'
-import * as Haptics from 'expo-haptics'
 import { useCallStore, CallData } from '@/stores/callStore'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
-interface IncomingCallProps {
+interface OutgoingCallProps {
   call: CallData
   userType: 'patient' | 'doctor'
-  onAnswer: () => void
-  onDecline: () => void
+  onCancel: () => void
+  onCallConnected?: () => void
 }
 
-export default function IncomingCall({ call, userType, onAnswer, onDecline }: IncomingCallProps) {
-  const [isAnswering, setIsAnswering] = useState(false)
-  const [isDeclining, setIsDeclining] = useState(false)
-  const { answerCall, declineCall } = useCallStore()
+export default function OutgoingCall({ call, userType, onCancel, onCallConnected }: OutgoingCallProps) {
+  const [isCancelling, setIsCancelling] = useState(false)
+  const { endCall, setCurrentCall } = useCallStore()
   const soundRef = useRef<Audio.Sound | null>(null)
-  const vibrationInterval = useRef<NodeJS.Timeout | null>(null)
+  const soundInterval = useRef<NodeJS.Timeout | null>(null)
 
   // Animation values for pulsing rings
   const pulseAnim1 = useRef(new Animated.Value(1)).current
@@ -89,80 +89,52 @@ export default function IncomingCall({ call, userType, onAnswer, onDecline }: In
     }, 750)
   }, [])
 
-  // Play ringing sound and vibration
+  // Play dial tone sound
   useEffect(() => {
     let mounted = true
 
-    const playRingingSound = async () => {
+    const playDialTone = async () => {
       try {
-        // Set audio mode for phone calls
         await Audio.setAudioModeAsync({
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
           shouldDuckAndroid: false,
         })
 
-        // Create a simple beep pattern for ringing
-        // We'll use a data URI with a simple tone pattern
-        const playBeep = async () => {
-          // Generate a simple beep using AudioContext-like approach
-          // For now, we'll use system sounds or create a simple pattern
-          const { sound } = await Audio.Sound.createAsync(
-            { uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-            { shouldPlay: false, volume: 1.0 }
-          )
-          
-          // Play beep pattern: beep every 2 seconds
-          const playInterval = setInterval(async () => {
-            if (mounted && sound) {
-              try {
-                await sound.setPositionAsync(0)
-                await sound.playAsync()
-              } catch {
-                // Ignore errors
-              }
-            }
-          }, 2000)
+        // Play a dial tone beep pattern
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+          { shouldPlay: false, volume: 0.5 }
+        )
 
-          if (mounted) {
-            soundRef.current = sound
-            // Play first beep immediately
-            await sound.playAsync()
-            
-            return () => clearInterval(playInterval)
-          }
-        }
-
-        await playBeep()
-      } catch (error) {
-        console.log('Could not play sound:', error)
-        // Fallback: use vibration only
-      }
-    }
-
-    // Start vibration pattern
-    const startVibration = async () => {
-      try {
-        if (Platform.OS === 'ios') {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-        }
-        
-        vibrationInterval.current = setInterval(async () => {
-          if (Platform.OS === 'ios') {
+        // Play beep every 3 seconds for dial tone effect
+        const playInterval = setInterval(async () => {
+          if (mounted && sound) {
             try {
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+              await sound.setPositionAsync(0)
+              await sound.playAsync()
             } catch {
-              // Ignore haptic errors
+              // Ignore errors
             }
           }
-        }, 1500)
-      } catch {
-        // Haptics not available, skip
+        }, 3000)
+
+        if (mounted) {
+          soundRef.current = sound
+          soundInterval.current = playInterval
+        }
+
+        return () => {
+          if (playInterval) {
+            clearInterval(playInterval)
+          }
+        }
+      } catch (error) {
+        console.log('Could not play dial tone:', error)
       }
     }
 
-    playRingingSound()
-    startVibration()
+    playDialTone()
 
     return () => {
       mounted = false
@@ -170,14 +142,40 @@ export default function IncomingCall({ call, userType, onAnswer, onDecline }: In
         soundRef.current.unloadAsync().catch(() => {})
         soundRef.current = null
       }
-      if (vibrationInterval.current) {
-        clearInterval(vibrationInterval.current)
+      if (soundInterval.current) {
+        clearInterval(soundInterval.current)
       }
     }
   }, [])
 
-  const callerName = userType === 'patient' ? call.doctorName : call.patientName
-  const callerRole = userType === 'patient' ? 'Doctor' : 'Patient'
+  // Subscribe to call status changes
+  useEffect(() => {
+    const callRef = doc(db, 'calls', call.id)
+    const unsubscribe = onSnapshot(callRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const callData = snapshot.data() as CallData
+        const updatedCall = {
+          ...call,
+          ...callData,
+          id: snapshot.id
+        } as CallData
+
+        if (callData.status === 'connected') {
+          stopSound()
+          setCurrentCall(updatedCall)
+          onCallConnected?.()
+        } else if (callData.status === 'declined' || callData.status === 'ended' || callData.status === 'missed') {
+          stopSound()
+          onCancel()
+        }
+      }
+    })
+
+    return unsubscribe
+  }, [call.id])
+
+  const recipientName = userType === 'patient' ? call.doctorName : call.patientName
+  const callTypeText = call.callType === 'video' ? 'Video Call' : 'Voice Call'
 
   const stopSound = async () => {
     if (soundRef.current) {
@@ -189,33 +187,21 @@ export default function IncomingCall({ call, userType, onAnswer, onDecline }: In
       }
       soundRef.current = null
     }
-    if (vibrationInterval.current) {
-      clearInterval(vibrationInterval.current)
-      vibrationInterval.current = null
+    if (soundInterval.current) {
+      clearInterval(soundInterval.current)
+      soundInterval.current = null
     }
   }
 
-  const handleAnswer = async () => {
+  const handleCancel = async () => {
     try {
       await stopSound()
-      setIsAnswering(true)
-      await answerCall(call.id)
-      onAnswer()
-    } catch (error) {
-      Alert.alert('Error', 'Failed to answer call')
-      setIsAnswering(false)
-    }
-  }
-
-  const handleDecline = async () => {
-    try {
-      await stopSound()
-      setIsDeclining(true)
-      await declineCall(call.id)
-      onDecline()
-    } catch (error) {
-      Alert.alert('Error', 'Failed to decline call')
-      setIsDeclining(false)
+      setIsCancelling(true)
+      await endCall(call.id)
+      onCancel()
+    } catch {
+      Alert.alert('Error', 'Failed to cancel call')
+      setIsCancelling(false)
     }
   }
 
@@ -225,8 +211,8 @@ export default function IncomingCall({ call, userType, onAnswer, onDecline }: In
       animationType="slide"
       presentationStyle="fullScreen"
     >
-      <View className="flex-1 bg-gradient-to-b from-blue-900 to-blue-700 items-center justify-center">
-        {/* Caller Info */}
+      <View className="flex-1 bg-blue-900 items-center justify-center" style={{ backgroundColor: '#1e3a8a' }}>
+        {/* Recipient Info */}
         <View className="items-center mb-16">
           <View className="w-40 h-40 bg-white/20 rounded-full items-center justify-center mb-6">
             <Ionicons 
@@ -237,15 +223,15 @@ export default function IncomingCall({ call, userType, onAnswer, onDecline }: In
           </View>
           
           <Text className="text-white text-3xl font-bold mb-2">
-            {callerName}
+            {recipientName}
           </Text>
           
           <Text className="text-blue-100 text-lg mb-2">
-            {callerRole}
+            {callTypeText}
           </Text>
           
           <Text className="text-blue-200 text-base">
-            Incoming {call.callType === 'video' ? 'video' : 'voice'} call...
+            Calling...
           </Text>
         </View>
 
@@ -267,42 +253,25 @@ export default function IncomingCall({ call, userType, onAnswer, onDecline }: In
           />
         </View>
 
-        {/* Call Actions */}
+        {/* Cancel Button */}
         <View className="absolute bottom-20 left-0 right-0">
-          <View className="flex-row justify-center items-center space-x-16">
-            {/* Decline Button */}
+          <View className="items-center">
             <TouchableOpacity
-              onPress={handleDecline}
-              disabled={isDeclining || isAnswering}
+              onPress={handleCancel}
+              disabled={isCancelling}
               className="w-20 h-20 bg-red-600 rounded-full items-center justify-center shadow-lg"
             >
-              {isDeclining ? (
+              {isCancelling ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
                 <Ionicons name="call" size={32} color="#ffffff" style={{ transform: [{ rotate: '135deg' }] }} />
               )}
             </TouchableOpacity>
-
-            {/* Answer Button */}
-            <TouchableOpacity
-              onPress={handleAnswer}
-              disabled={isAnswering || isDeclining}
-              className="w-20 h-20 bg-green-600 rounded-full items-center justify-center shadow-lg"
-            >
-              {isAnswering ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Ionicons name="call" size={32} color="#ffffff" />
-              )}
-            </TouchableOpacity>
-          </View>
-          
-          <View className="flex-row justify-center mt-6 space-x-16">
-            <Text className="text-white text-sm">Decline</Text>
-            <Text className="text-white text-sm">Answer</Text>
+            <Text className="text-white text-sm mt-4">Cancel</Text>
           </View>
         </View>
       </View>
     </Modal>
   )
 }
+

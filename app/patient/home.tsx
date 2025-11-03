@@ -1,26 +1,58 @@
 import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
-import { useAppointmentsStore } from '@/stores/appointmentsStore'
-import { auth } from '@/lib/firebase'
+import { useAppointmentsStore, Appointment } from '@/stores/appointmentsStore'
+import { useCallStore, CallData } from '@/stores/callStore'
+import { auth, db } from '@/lib/firebase'
 import { signOut } from 'firebase/auth'
+import { doc, getDoc, Timestamp } from 'firebase/firestore'
 import Button from '@/components/Button'
 import { Ionicons } from '@expo/vector-icons'
+import VideoCall from '@/components/VideoCall'
+import OutgoingCall from '@/components/OutgoingCall'
+
+interface Doctor {
+  id: string
+  displayName: string
+  email: string
+  doctorData?: {
+    medicalLicense: string
+    specialization: string
+    experience: number
+    qualifications: string
+    certifications: string[]
+    hospitalAffiliation?: string
+    consultationFee?: number
+    isVerified: boolean
+  }
+}
 
 export default function PatientHome() {
   const router = useRouter()
   const { userData, logout } = useAuthStore()
   const { appointments, subscribeToAppointments, isLoading } = useAppointmentsStore()
+  const { initiateCall, currentCall, setCurrentCall, subscribeToIncomingCalls } = useCallStore()
   const [refreshing, setRefreshing] = useState(false)
+  const [showDoctorDialog, setShowDoctorDialog] = useState(false)
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [loadingDoctor, setLoadingDoctor] = useState(false)
+  const [isInitiatingVideoCall, setIsInitiatingVideoCall] = useState(false)
+  const [isInitiatingVoiceCall, setIsInitiatingVoiceCall] = useState(false)
+  const [outgoingCall, setOutgoingCall] = useState<CallData | null>(null)
 
   useEffect(() => {
     if (userData?.uid) {
-      const unsubscribe = subscribeToAppointments(userData.uid, 'patient')
-      return () => unsubscribe()
+      const unsubscribeAppointments = subscribeToAppointments(userData.uid, 'patient')
+      const unsubscribeCalls = subscribeToIncomingCalls(userData.uid, 'patient')
+      return () => {
+        unsubscribeAppointments()
+        unsubscribeCalls()
+      }
     }
-  }, [userData?.uid, subscribeToAppointments])
+  }, [userData?.uid, subscribeToAppointments, subscribeToIncomingCalls])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -38,9 +70,160 @@ export default function PatientHome() {
     }
   }
 
+  const handleDoctorClick = async (appointment: Appointment) => {
+    setLoadingDoctor(true)
+    setShowDoctorDialog(true)
+    setSelectedAppointment(appointment)
+    
+    try {
+      const doctorRef = doc(db, 'users', appointment.doctorId)
+      const doctorSnap = await getDoc(doctorRef)
+      
+      if (doctorSnap.exists()) {
+        setSelectedDoctor({
+          id: doctorSnap.id,
+          ...doctorSnap.data()
+        } as Doctor)
+      } else {
+        console.error('Doctor not found')
+      }
+    } catch (error) {
+      console.error('Error fetching doctor details:', error)
+    } finally {
+      setLoadingDoctor(false)
+    }
+  }
+
+  const handleVideoCall = async () => {
+    if (!selectedDoctor || !selectedAppointment || !userData?.uid || !userData?.displayName) {
+      Alert.alert('Error', 'Unable to initiate video call. Please try again.')
+      return
+    }
+
+    if (isInitiatingVoiceCall) {
+      return // Don't allow if voice call is being initiated
+    }
+
+    try {
+      setIsInitiatingVideoCall(true)
+      const callId = await initiateCall(
+        userData.uid,
+        selectedDoctor.id,
+        userData.displayName,
+        selectedDoctor.displayName,
+        selectedAppointment.id,
+        'video'
+      )
+      
+      // Set outgoing call to show calling screen
+      setOutgoingCall({
+        id: callId,
+        patientId: userData.uid,
+        doctorId: selectedDoctor.id,
+        patientName: userData.displayName,
+        doctorName: selectedDoctor.displayName,
+        appointmentId: selectedAppointment.id,
+        status: 'ringing',
+        startTime: Timestamp.now(),
+        callType: 'video'
+      })
+      
+      setShowDoctorDialog(false)
+    } catch {
+      Alert.alert('Error', 'Failed to start video call. Please try again.')
+      setIsInitiatingVideoCall(false)
+    }
+  }
+
+  const handleVoiceCall = async () => {
+    if (!selectedDoctor || !selectedAppointment || !userData?.uid || !userData?.displayName) {
+      Alert.alert('Error', 'Unable to initiate voice call. Please try again.')
+      return
+    }
+
+    if (isInitiatingVideoCall) {
+      return // Don't allow if video call is being initiated
+    }
+
+    try {
+      setIsInitiatingVoiceCall(true)
+      const callId = await initiateCall(
+        userData.uid,
+        selectedDoctor.id,
+        userData.displayName,
+        selectedDoctor.displayName,
+        selectedAppointment.id,
+        'audio'
+      )
+      
+      // Set outgoing call to show calling screen
+      setOutgoingCall({
+        id: callId,
+        patientId: userData.uid,
+        doctorId: selectedDoctor.id,
+        patientName: userData.displayName,
+        doctorName: selectedDoctor.displayName,
+        appointmentId: selectedAppointment.id,
+        status: 'ringing',
+        startTime: Timestamp.now(),
+        callType: 'audio'
+      })
+      
+      setShowDoctorDialog(false)
+    } catch {
+      Alert.alert('Error', 'Failed to start voice call. Please try again.')
+      setIsInitiatingVoiceCall(false)
+    }
+  }
+
+  const handleChat = () => {
+    setShowDoctorDialog(false)
+    router.push('/patient/chat')
+  }
+
+  const handleEndCall = () => {
+    setCurrentCall(null)
+    setOutgoingCall(null)
+  }
+
+  const handleCancelOutgoingCall = () => {
+    setOutgoingCall(null)
+    setIsInitiatingVideoCall(false)
+    setIsInitiatingVoiceCall(false)
+  }
+
+  const handleCallConnected = () => {
+    setOutgoingCall(null)
+    setIsInitiatingVideoCall(false)
+    setIsInitiatingVoiceCall(false)
+  }
+
   const upcomingAppointments = appointments.filter(
     (apt) => apt.status === 'confirmed' || apt.status === 'pending'
   ).slice(0, 3)
+
+  // Show video call interface if there's an active connected call
+  if (currentCall && currentCall.status === 'connected') {
+    return (
+      <VideoCall 
+        call={currentCall} 
+        userType="patient" 
+        onEndCall={handleEndCall}
+      />
+    )
+  }
+
+  // Show outgoing call screen while waiting for doctor to answer
+  if (outgoingCall) {
+    return (
+      <OutgoingCall
+        call={outgoingCall}
+        userType="patient"
+        onCancel={handleCancelOutgoingCall}
+        onCallConnected={handleCallConnected}
+      />
+    )
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
@@ -93,27 +276,7 @@ export default function PatientHome() {
               AI Health Assistant
             </Text>
             
-            <TouchableOpacity
-              className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 mb-4"
-              onPress={() => router.push('/patient/medicine-info')}
-            >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <View className="flex-row items-center mb-2">
-                    <Ionicons name="medical" size={24} color="#f00505ff" />
-                    <Text className="text-white font-bold text-lg ml-2">Medical Assistant</Text>
-                  </View>
-                  <Text className=" text-sm mb-3">
-                    Get instant answers about medicines, symptoms, and health conditions
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Ionicons name="sparkles" size={16} color="#e9d712ff" />
-                    <Text className=" text-xs ml-1 font-medium">AI-Powered</Text>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#ffffff" />
-              </View>
-            </TouchableOpacity>
+           
 
             <View className="flex-row gap-3">
               <TouchableOpacity
@@ -180,6 +343,7 @@ export default function PatientHome() {
             upcomingAppointments.map((appointment) => (
               <TouchableOpacity
                 key={appointment.id}
+                onPress={() => handleDoctorClick(appointment)}
                 className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-3 border border-gray-200 dark:border-gray-700"
               >
                 <View className="flex-row justify-between items-start">
@@ -217,6 +381,199 @@ export default function PatientHome() {
           )}
         </View>
       </ScrollView>
+
+      {/* Doctor Details Bottom Dialog */}
+      <Modal
+        visible={showDoctorDialog}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDoctorDialog(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)'
+          }}
+          activeOpacity={1}
+          onPress={() => setShowDoctorDialog(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            className="bg-white dark:bg-gray-900"
+            style={{
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              minHeight: '85%'
+            }}
+          >
+            <View className="flex-row items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                Doctor Details
+              </Text>
+              <TouchableOpacity onPress={() => setShowDoctorDialog(false)}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingVertical: 16 }}>
+              {loadingDoctor ? (
+                <Text className="text-gray-500 text-center py-8">Loading doctor details...</Text>
+              ) : selectedDoctor ? (
+                <View>
+                  {/* Doctor Header */}
+                  <View className="mb-6">
+                    <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                      Dr. {selectedDoctor.displayName}
+                    </Text>
+                    {selectedDoctor.doctorData?.isVerified && (
+                      <View className="bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full self-start">
+                        <Text className="text-green-700 dark:text-green-300 text-xs font-medium">
+                          ✓ Verified Doctor
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Two Column Layout for Doctor Info */}
+                  <View className="flex-row flex-wrap mb-4">
+                    {selectedDoctor.doctorData?.specialization && (
+                      <View className="w-[48%] mb-4 mr-[4%]">
+                        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          Specialization
+                        </Text>
+                        <Text className="text-base text-blue-600 dark:text-blue-400 font-semibold">
+                          {selectedDoctor.doctorData.specialization}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedDoctor.doctorData?.experience && (
+                      <View className="w-[48%] mb-4">
+                        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          Experience
+                        </Text>
+                        <Text className="text-base text-gray-900 dark:text-white">
+                          {selectedDoctor.doctorData.experience} years
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedDoctor.doctorData?.qualifications && (
+                      <View className="w-[48%] mb-4 mr-[4%]">
+                        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          Qualifications
+                        </Text>
+                        <Text className="text-sm text-gray-900 dark:text-white">
+                          {selectedDoctor.doctorData.qualifications}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedDoctor.doctorData?.consultationFee && (
+                      <View className="w-[48%] mb-4">
+                        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          Consultation Fee
+                        </Text>
+                        <Text className="text-base text-green-600 dark:text-green-400 font-semibold">
+                          ₹{selectedDoctor.doctorData.consultationFee}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedDoctor.doctorData?.hospitalAffiliation && (
+                      <View className="w-[48%] mb-4 mr-[4%]">
+                        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          Hospital
+                        </Text>
+                        <Text className="text-sm text-gray-900 dark:text-white">
+                          {selectedDoctor.doctorData.hospitalAffiliation}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedDoctor.email && (
+                      <View className="w-[48%] mb-4">
+                        <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          Email
+                        </Text>
+                        <Text className="text-sm text-gray-900 dark:text-white">
+                          {selectedDoctor.email}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Certifications - Full Width */}
+                  {selectedDoctor.doctorData?.certifications && selectedDoctor.doctorData.certifications.length > 0 && (
+                    <View className="mb-4">
+                      <Text className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                        Certifications
+                      </Text>
+                      {selectedDoctor.doctorData.certifications.map((cert, index) => (
+                        <View
+                          key={index}
+                          className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 mb-2"
+                        >
+                          <Text className="text-sm text-gray-900 dark:text-white">
+                            • {cert}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Action Buttons */}
+                  <View className="mt-6 mb-4 border-t border-gray-200 dark:border-gray-700 pt-6 grid grid-cols-3 gap-2">
+                    <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      Contact Doctor
+                    </Text>
+                    
+                    <View className="flex-row gap-2">
+                      <TouchableOpacity
+                        onPress={handleVideoCall}
+                        disabled={isInitiatingVideoCall || isInitiatingVoiceCall}
+                        className="flex-1 items-center justify-center bg-blue-600 rounded-lg p-3"
+                      >
+                        <Ionicons name="videocam" size={20} color="#ffffff" />
+                        <Text className="text-white font-semibold text-xs mt-1 text-center">
+                          {isInitiatingVideoCall ? 'Calling...' : 'Video'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={handleVoiceCall}
+                        disabled={isInitiatingVoiceCall || isInitiatingVideoCall}
+                        className="flex-1 items-center justify-center bg-green-600 rounded-lg p-3"
+                      >
+                        <Ionicons name="call" size={20} color="#ffffff" />
+                        <Text className="text-white font-semibold text-xs mt-1 text-center">
+                          {isInitiatingVoiceCall ? 'Calling...' : 'Voice'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={handleChat}
+                        className="flex-1 items-center justify-center bg-purple-600 rounded-lg p-3"
+                      >
+                        <Ionicons name="chatbubbles" size={20} color="#ffffff" />
+                        <Text className="text-white font-semibold text-xs mt-1 text-center">
+                          Chat
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <Text className="text-gray-500 text-center py-8">
+                  Doctor details not available
+                </Text>
+              )}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   )
 }

@@ -23,7 +23,7 @@ interface CallStore {
   isLoading: boolean
   
   // Actions
-  initiateCall: (patientId: string, doctorId: string, patientName: string, doctorName: string, appointmentId?: string) => Promise<string>
+  initiateCall: (patientId: string, doctorId: string, patientName: string, doctorName: string, appointmentId?: string, callType?: 'video' | 'audio') => Promise<string>
   answerCall: (callId: string) => Promise<void>
   declineCall: (callId: string) => Promise<void>
   endCall: (callId: string) => Promise<void>
@@ -38,7 +38,7 @@ export const useCallStore = create<CallStore>((set, get) => ({
   currentCall: null,
   isLoading: false,
 
-  initiateCall: async (patientId: string, doctorId: string, patientName: string, doctorName: string, appointmentId?: string) => {
+  initiateCall: async (patientId: string, doctorId: string, patientName: string, doctorName: string, appointmentId?: string, callType: 'video' | 'audio' = 'video') => {
     try {
       set({ isLoading: true })
       
@@ -50,7 +50,7 @@ export const useCallStore = create<CallStore>((set, get) => ({
         appointmentId,
         status: 'initiating' as const,
         startTime: Timestamp.now(),
-        callType: 'video' as const
+        callType: callType as 'video' | 'audio'
       }
 
       const docRef = await addDoc(collection(db, 'calls'), callData)
