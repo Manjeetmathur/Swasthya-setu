@@ -430,60 +430,6 @@ export default function AllHospitals() {
     }
   }, [appointmentDate, selectedHospital])
 
-  const timeSlots = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-    '15:00', '15:30', '16:00', '16:30', '17:00'
-  ]
-
-  const handleBookAppointment = async () => {
-    if (!selectedHospital || !userData) {
-      Alert.alert('Error', 'Missing hospital or user data')
-      return
-    }
-
-    if (!appointmentDate || !appointmentTime || !appointmentReason.trim()) {
-      Alert.alert('Error', 'Please fill in all fields')
-      return
-    }
-
-    setLoadingAppointment(true)
-    try {
-      const selectedDate = new Date(appointmentDate)
-      selectedDate.setHours(parseInt(appointmentTime.split(':')[0]), parseInt(appointmentTime.split(':')[1]))
-
-      await addDoc(collection(db, 'appointments'), {
-        patientId: userData.uid,
-        hospitalId: selectedHospital.id,
-        patientName: userData.displayName || 'Patient',
-        hospitalName: selectedHospital.hospitalData.hospitalName,
-        date: Timestamp.fromDate(selectedDate),
-        time: appointmentTime,
-        status: 'pending',
-        reason: appointmentReason.trim(),
-        appointmentType: 'hospital',
-        createdAt: Timestamp.now()
-      })
-
-      Alert.alert('Success', 'Appointment booked successfully!', [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            setShowAppointmentBooking(false)
-            setAppointmentDate('')
-            setAppointmentTime('')
-            setAppointmentReason('')
-          }
-        }
-      ])
-    } catch (error: any) {
-      console.error('Error booking appointment:', error)
-      Alert.alert('Error', error.message || 'Failed to book appointment')
-    } finally {
-      setLoadingAppointment(false)
-    }
-  }
-
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
       {/* Header */}
