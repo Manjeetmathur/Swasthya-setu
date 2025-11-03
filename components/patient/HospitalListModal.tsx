@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Hospital } from '@/types'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface HospitalListModalProps {
   visible: boolean
@@ -14,6 +15,7 @@ interface HospitalListModalProps {
 
 export default function HospitalListModal({ visible, onClose, onHospitalSelect }: HospitalListModalProps) {
   const router = useRouter()
+  const { t } = useLanguageStore()
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -74,7 +76,7 @@ export default function HospitalListModal({ visible, onClose, onHospitalSelect }
       <View className="flex-1 bg-white dark:bg-gray-900">
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <Text className="text-xl font-bold text-gray-900 dark:text-white">
-            Select Hospital
+            {t('home.select_hospital')}
           </Text>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={24} color="#6b7280" />
@@ -84,13 +86,13 @@ export default function HospitalListModal({ visible, onClose, onHospitalSelect }
         {loading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#9333ea" />
-            <Text className="text-gray-600 dark:text-gray-400 mt-4">Loading hospitals...</Text>
+            <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('home.loading_hospitals')}</Text>
           </View>
         ) : hospitals.length === 0 ? (
           <View className="flex-1 items-center justify-center px-6">
             <Ionicons name="business-outline" size={64} color="#9ca3af" />
             <Text className="text-gray-600 dark:text-gray-400 mt-4 text-center">
-              No verified hospitals available
+              {t('home.no_hospitals')}
             </Text>
           </View>
         ) : (
@@ -113,7 +115,7 @@ export default function HospitalListModal({ visible, onClose, onHospitalSelect }
                         </Text>
                         <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full ml-2">
                           <Text className="text-xs font-semibold text-green-700 dark:text-green-300">
-                            VERIFIED
+                            {t('home.verified')}
                           </Text>
                         </View>
                       </View>

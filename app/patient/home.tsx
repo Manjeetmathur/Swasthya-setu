@@ -19,6 +19,7 @@ import QuickActionsSection from '@/components/patient/QuickActionsSection'
 import ServicesSection from '@/components/patient/ServicesSection'
 import AppointmentsSection from '@/components/patient/AppointmentsSection'
 import { Doctor, Hospital } from '@/types'
+import { useLanguageStore } from '@/stores/languageStore'
 
 export default function PatientHome() {
   const router = useRouter()
@@ -27,6 +28,7 @@ export default function PatientHome() {
   const { initiateCall, currentCall, setCurrentCall, subscribeToIncomingCalls } = useCallStore()
   const { activeAlert, cancelEmergency } = useEmergencyStore()
   const { beds, subscribeToBeds, getBedStats, isLoading: bedLoading } = useBedManagementStore()
+  const { t } = useLanguageStore()
   const [refreshing, setRefreshing] = useState(false)
   const [showDoctorDialog, setShowDoctorDialog] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
@@ -193,19 +195,19 @@ export default function PatientHome() {
     if (!activeAlert) return
 
     Alert.alert(
-      'Cancel Emergency',
-      'Are you sure you want to cancel this emergency alert?',
+      t('home.cancel_emergency'),
+      t('home.cancel_emergency_confirm'),
       [
-        { text: 'No', style: 'cancel' },
+        { text: t('home.no'), style: 'cancel' },
         {
-          text: 'Yes, Cancel',
+          text: t('home.yes_cancel'),
           style: 'destructive',
           onPress: async () => {
             try {
               await cancelEmergency(activeAlert.id)
-              Alert.alert('Success', 'Emergency alert cancelled')
+              Alert.alert(t('home.success'), t('home.emergency_cancelled'))
             } catch {
-              Alert.alert('Error', 'Failed to cancel emergency alert')
+              Alert.alert(t('home.error'), t('home.failed_cancel_emergency'))
             }
           }
         }
@@ -230,12 +232,12 @@ export default function PatientHome() {
 
   const handleCallHospital = (phoneNumber: string) => {
     Alert.alert(
-      'Call Hospital',
-      `Do you want to call ${phoneNumber}?`,
+      t('home.call_hospital'),
+      `${t('home.call_hospital_confirm')} ${phoneNumber}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('home.cancel'), style: 'cancel' },
         {
-          text: 'Call',
+          text: t('home.call'),
           onPress: () => {
             Linking.openURL(`tel:${phoneNumber}`)
           }
@@ -246,12 +248,12 @@ export default function PatientHome() {
 
   const handleEmergencyCall = (emergencyNumber: string) => {
     Alert.alert(
-      'Emergency Call',
-      `Do you want to call emergency number ${emergencyNumber}?`,
+      t('home.emergency_call'),
+      `${t('home.emergency_call_confirm')} ${emergencyNumber}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('home.cancel'), style: 'cancel' },
         {
-          text: 'Call Now',
+          text: t('home.call_now'),
           style: 'destructive',
           onPress: () => {
             Linking.openURL(`tel:${emergencyNumber}`)
@@ -267,12 +269,12 @@ export default function PatientHome() {
     const encodedAddress = encodeURIComponent(fullAddress)
     
     Alert.alert(
-      'Open in Maps',
-      `Open ${hospital.hospitalData.hospitalName} location in Google Maps?`,
+      t('home.open_in_maps'),
+      `${hospital.hospitalData.hospitalName} ${t('home.open_maps_confirm')}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('home.cancel'), style: 'cancel' },
         {
-          text: 'Open Maps',
+          text: t('home.open_maps'),
           onPress: () => {
             const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`
             Linking.openURL(mapsUrl)
@@ -310,7 +312,7 @@ export default function PatientHome() {
 
   const handleVideoCall = async () => {
     if (!selectedDoctor || !selectedAppointment || !userData?.uid || !userData?.displayName) {
-      Alert.alert('Error', 'Unable to initiate video call. Please try again.')
+      Alert.alert(t('home.error'), t('home.unable_initiate_video_call'))
       return
     }
 
@@ -344,14 +346,14 @@ export default function PatientHome() {
       
       setShowDoctorDialog(false)
     } catch {
-      Alert.alert('Error', 'Failed to start video call. Please try again.')
+      Alert.alert(t('home.error'), t('home.failed_start_video_call'))
       setIsInitiatingVideoCall(false)
     }
   }
 
   const handleVoiceCall = async () => {
     if (!selectedDoctor || !selectedAppointment || !userData?.uid || !userData?.displayName) {
-      Alert.alert('Error', 'Unable to initiate voice call. Please try again.')
+      Alert.alert(t('home.error'), t('home.unable_initiate_voice_call'))
       return
     }
 
@@ -385,7 +387,7 @@ export default function PatientHome() {
       
       setShowDoctorDialog(false)
     } catch {
-      Alert.alert('Error', 'Failed to start voice call. Please try again.')
+      Alert.alert(t('home.error'), t('home.failed_start_voice_call'))
       setIsInitiatingVoiceCall(false)
     }
   }
@@ -494,7 +496,7 @@ export default function PatientHome() {
           >
             <View className="flex-row items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <Text className="text-xl font-bold text-gray-900 dark:text-white">
-                Doctor Details
+                {t('home.doctor_details')}
               </Text>
               <TouchableOpacity onPress={() => setShowDoctorDialog(false)}>
                 <Ionicons name="close" size={24} color="#6b7280" />
@@ -503,7 +505,7 @@ export default function PatientHome() {
 
             <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingVertical: 16 }}>
               {loadingDoctor ? (
-                <Text className="text-gray-500 text-center py-8">Loading doctor details...</Text>
+                <Text className="text-gray-500 text-center py-8">{t('home.loading_doctor_details')}</Text>
               ) : selectedDoctor ? (
                 <View>
                   {/* Doctor Header */}
@@ -525,7 +527,7 @@ export default function PatientHome() {
                     {selectedDoctor.doctorData?.specialization && (
                       <View className="w-[48%] mb-4 mr-[4%]">
                         <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Specialization
+                          {t('home.specialization')}
                         </Text>
                         <Text className="text-base text-blue-600 dark:text-blue-400 font-semibold">
                           {selectedDoctor.doctorData.specialization}
@@ -536,10 +538,10 @@ export default function PatientHome() {
                     {selectedDoctor.doctorData?.experience && (
                       <View className="w-[48%] mb-4">
                         <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Experience
+                          {t('home.experience')}
                         </Text>
                         <Text className="text-base text-gray-900 dark:text-white">
-                          {selectedDoctor.doctorData.experience} years
+                          {selectedDoctor.doctorData.experience} {t('home.years')}
                         </Text>
                       </View>
                     )}
@@ -547,7 +549,7 @@ export default function PatientHome() {
                     {selectedDoctor.doctorData?.qualifications && (
                       <View className="w-[48%] mb-4 mr-[4%]">
                         <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Qualifications
+                          {t('home.qualifications')}
                         </Text>
                         <Text className="text-sm text-gray-900 dark:text-white">
                           {selectedDoctor.doctorData.qualifications}
@@ -558,7 +560,7 @@ export default function PatientHome() {
                     {selectedDoctor.doctorData?.consultationFee && (
                       <View className="w-[48%] mb-4">
                         <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Consultation Fee
+                          {t('home.consultation_fee')}
                         </Text>
                         <Text className="text-base text-green-600 dark:text-green-400 font-semibold">
                           ₹{selectedDoctor.doctorData.consultationFee}
@@ -569,7 +571,7 @@ export default function PatientHome() {
                     {selectedDoctor.doctorData?.hospitalAffiliation && (
                       <View className="w-[48%] mb-4 mr-[4%]">
                         <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Hospital
+                          {t('home.hospital')}
                         </Text>
                         <Text className="text-sm text-gray-900 dark:text-white">
                           {selectedDoctor.doctorData.hospitalAffiliation}
@@ -580,7 +582,7 @@ export default function PatientHome() {
                     {selectedDoctor.email && (
                       <View className="w-[48%] mb-4">
                         <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Email
+                          {t('home.email')}
                         </Text>
                         <Text className="text-sm text-gray-900 dark:text-white">
                           {selectedDoctor.email}
@@ -593,7 +595,7 @@ export default function PatientHome() {
                   {selectedDoctor.doctorData?.certifications && selectedDoctor.doctorData.certifications.length > 0 && (
                     <View className="mb-4">
                       <Text className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                        Certifications
+                        {t('home.certifications')}
                       </Text>
                       {selectedDoctor.doctorData.certifications.map((cert, index) => (
                         <View
@@ -611,7 +613,7 @@ export default function PatientHome() {
                   {/* Action Buttons */}
                   <View className="mt-6 mb-4 border-t border-gray-200 dark:border-gray-700 pt-6 grid grid-cols-3 gap-2">
                     <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      Contact Doctor
+                      {t('home.contact_doctor')}
                     </Text>
                     
                     <View className="flex-row gap-2">
