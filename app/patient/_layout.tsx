@@ -109,6 +109,12 @@ export default function PatientLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="emergency-services"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   )
 }
