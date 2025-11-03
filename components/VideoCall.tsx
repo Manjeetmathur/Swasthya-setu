@@ -80,7 +80,7 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
       <View className="flex-1 relative">
         {/* Remote Video (Full Screen) */}
         <View className="flex-1 bg-gray-800 items-center justify-center">
-          {isVideoOff ? (
+          {call.callType === 'audio' || isVideoOff ? (
             <View className="items-center">
               <View className="w-32 h-32 bg-gray-600 rounded-full items-center justify-center mb-4">
                 <Ionicons name="person" size={64} color="#ffffff" />
@@ -88,6 +88,11 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
               <Text className="text-white text-lg font-semibold">
                 {otherPersonName}
               </Text>
+              {call.callType === 'audio' && (
+                <Text className="text-gray-400 text-sm mt-2">
+                  Voice Call
+                </Text>
+              )}
             </View>
           ) : (
             <View className="flex-1 w-full bg-gray-700 items-center justify-center">
@@ -99,18 +104,20 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
           )}
         </View>
 
-        {/* Local Video (Picture in Picture) */}
-        <View className="absolute top-12 right-4 w-32 h-40 bg-gray-600 rounded-lg overflow-hidden">
-          {isVideoOff ? (
-            <View className="flex-1 items-center justify-center">
-              <Ionicons name="videocam-off" size={24} color="#ffffff" />
-            </View>
-          ) : (
-            <View className="flex-1 items-center justify-center">
-              <Text className="text-white text-xs">You</Text>
-            </View>
-          )}
-        </View>
+        {/* Local Video (Picture in Picture) - Only show for video calls */}
+        {call.callType === 'video' && (
+          <View className="absolute top-12 right-4 w-32 h-40 bg-gray-600 rounded-lg overflow-hidden">
+            {isVideoOff ? (
+              <View className="flex-1 items-center justify-center">
+                <Ionicons name="videocam-off" size={24} color="#ffffff" />
+              </View>
+            ) : (
+              <View className="flex-1 items-center justify-center">
+                <Text className="text-white text-xs">You</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Call Info Overlay */}
         <View className="absolute top-12 left-4 right-4">
@@ -150,19 +157,21 @@ export default function VideoCall({ call, userType, onEndCall }: VideoCallProps)
             <Ionicons name="call" size={32} color="#ffffff" />
           </TouchableOpacity>
 
-          {/* Video Toggle Button */}
-          <TouchableOpacity
-            onPress={toggleVideo}
-            className={`w-16 h-16 rounded-full items-center justify-center ${
-              isVideoOff ? 'bg-red-600' : 'bg-gray-600'
-            }`}
-          >
-            <Ionicons 
-              name={isVideoOff ? "videocam-off" : "videocam"} 
-              size={24} 
-              color="#ffffff" 
-            />
-          </TouchableOpacity>
+          {/* Video Toggle Button - Only show for video calls */}
+          {call.callType === 'video' && (
+            <TouchableOpacity
+              onPress={toggleVideo}
+              className={`w-16 h-16 rounded-full items-center justify-center ${
+                isVideoOff ? 'bg-red-600' : 'bg-gray-600'
+              }`}
+            >
+              <Ionicons 
+                name={isVideoOff ? "videocam-off" : "videocam"} 
+                size={24} 
+                color="#ffffff" 
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>

@@ -58,19 +58,13 @@ export default function PatientLayout() {
       <Tabs.Screen
         name="call"
         options={{
-          title: 'Calls',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="videocam" size={size} color={color} />
-          )
+          href: null,
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Chat',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
-          )
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -97,6 +91,24 @@ export default function PatientLayout() {
       />
       <Tabs.Screen
         name="profile"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="medicine-info"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="symptoms-check"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="health-tips"
         options={{
           href: null,
         }}
