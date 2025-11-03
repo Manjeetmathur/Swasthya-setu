@@ -341,7 +341,7 @@ export default function PatientHome() {
         <View className="px-6 py-4">
           <HomeHeader userName={userData?.displayName || undefined} />
 
-          <QuickActionsSection />
+          <QuickActionsSection onHospitalSelect={handleHospitalPress} />
 
           <ServicesSection
             activeAlert={activeAlert}

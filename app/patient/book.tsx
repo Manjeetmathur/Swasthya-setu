@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, Alert, Modal, Platform } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { collection, addDoc, query, where, getDocs, Timestamp, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -85,6 +85,7 @@ const TimeSlotGrid = React.memo(({ timeSlots, bookedSlots, selectedTime, onTimeS
 
 export default function BookAppointment() {
   const router = useRouter()
+  const params = useLocalSearchParams()
   const { userData } = useAuthStore()
   const { initiateCall, isLoading: isInitiatingCall } = useCallStore()
   const [doctors, setDoctors] = useState<Doctor[]>([])
@@ -110,13 +111,28 @@ export default function BookAppointment() {
   useEffect(() => {
     loadDoctors()
     
+    // Check if doctorId is passed from params
+    if (params.doctorId) {
+      setSelectedDoctor(params.doctorId as string)
+    }
+    
     // Cleanup listener on unmount
     return () => {
       if (slotsListener) {
         slotsListener()
       }
     }
-  }, [])
+  }, [params.doctorId])
+
+  // Auto-select doctor when selectedDoctor changes (from params) or doctors load
+  useEffect(() => {
+    if (selectedDoctor && doctors.length > 0) {
+      const doctor = doctors.find(d => d.id === selectedDoctor)
+      if (doctor) {
+        setSelectedDoctorData(doctor)
+      }
+    }
+  }, [selectedDoctor, doctors])
 
   // Cleanup previous listener when doctor or date changes
   useEffect(() => {

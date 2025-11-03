@@ -97,10 +97,10 @@ export default function ServicesSection({
           {hospitals.length > 0 && (
             <TouchableOpacity
               onPress={() => router.push('/patient/hospitals')}
-              className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1.5 rounded-full"
+              className="bg-purple-600 dark:bg-purple-700 px-4 py-2 rounded-lg"
             >
-              <Text className="text-purple-700 dark:text-purple-300 text-sm font-semibold">
-                View All
+              <Text className="text-white text-sm font-semibold">
+                E-Hospitals
               </Text>
             </TouchableOpacity>
           )}
