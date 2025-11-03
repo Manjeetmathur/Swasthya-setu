@@ -119,6 +119,12 @@ export default function PatientLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="diseases"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   )
 }

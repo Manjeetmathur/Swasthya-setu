@@ -39,7 +39,7 @@ export default function QuickActionsSection({ onHospitalSelect }: QuickActionsSe
         <Text className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
           Quick Actions
         </Text>
-        <View className="flex-row gap-3">
+        <View className="flex-row gap-3 mb-3">
           <TouchableOpacity
             className="flex-1 bg-purple-600 rounded-lg p-4 items-center"
             onPress={() => setShowHospitalModal(true)}
@@ -55,6 +55,13 @@ export default function QuickActionsSection({ onHospitalSelect }: QuickActionsSe
             <Text className="text-white font-semibold mt-2">Doctors</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          className="bg-green-600 rounded-lg p-4 items-center"
+          onPress={() => router.push('/patient/diseases')}
+        >
+          <Ionicons name="medical" size={24} color="#ffffff" />
+          <Text className="text-white font-semibold mt-2">Diseases & Cures</Text>
+        </TouchableOpacity>
       </View>
 
       <HospitalListModal
