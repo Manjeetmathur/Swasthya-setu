@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { User } from 'firebase/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-export type UserRole = 'patient' | 'doctor' | 'admin'
+export type UserRole = 'patient' | 'doctor' | 'admin' | 'hospital'
 
 interface DoctorData {
   medicalLicense: string
@@ -15,6 +15,25 @@ interface DoctorData {
   isVerified: boolean
 }
 
+interface HospitalData {
+  hospitalName: string
+  hospitalLicense: string
+  hospitalType: string
+  address: string
+  city: string
+  state: string
+  pincode: string
+  phoneNumber: string
+  emergencyNumber?: string
+  totalBeds: number
+  icuBeds?: number
+  specialties: string[]
+  facilities: string[]
+  accreditation?: string
+  establishedYear?: number
+  isVerified: boolean
+}
+
 interface UserData {
   uid: string
   email: string | null
@@ -22,6 +41,7 @@ interface UserData {
   role: UserRole
   photoURL: string | null
   doctorData?: DoctorData
+  hospitalData?: HospitalData
 }
 
 interface AuthState {

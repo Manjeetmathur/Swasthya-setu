@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity } from 'react-native'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { auth, db } from '@/lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 import { useAuthStore, UserRole } from '@/stores/authStore'
@@ -74,6 +74,8 @@ export default function Login() {
         }
       } else if (userData.role === 'admin') {
         router.replace('/admin')
+      } else if (userData.role === 'hospital') {
+        router.replace('/hospital')
       }
     }
   }, [isAuthenticated, userData, router])
@@ -87,27 +89,19 @@ export default function Login() {
     setLoading(true)
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      setUser(userCredential.user)
       
       // Fetch user data from Firestore
       try {
         const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid))
         let role: UserRole = 'patient'
         let doctorData = null
+        let hospitalData = null
         
         if (userDoc.exists()) {
           const userDataFromFirestore = userDoc.data()
           role = (userDataFromFirestore.role as UserRole) || 'patient'
           doctorData = userDataFromFirestore.doctorData || null
-        }
-
-        const userDataToSet = {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-          displayName: userCredential.user.displayName || userDoc.data()?.displayName || null,
-          role,
-          photoURL: userCredential.user.photoURL || null,
-          doctorData
+          hospitalData = userDataFromFirestore.hospitalData || null
         }
 
         // Check if doctor is verified before allowing login
@@ -123,6 +117,8 @@ export default function Login() {
           }
           
           if (!doctorData.isVerified) {
+            // Sign out the user since they can't access the system
+            await signOut(auth)
             Alert.alert(
               'Account Pending Verification',
               'Your doctor account is pending admin verification. Please wait for approval before you can access the system.',
@@ -133,6 +129,44 @@ export default function Login() {
           }
         }
 
+        // Check if hospital is verified before allowing login
+        if (role === 'hospital') {
+          if (!hospitalData) {
+            Alert.alert(
+              'Incomplete Registration',
+              'Your hospital profile is incomplete. Please contact support.',
+              [{ text: 'OK' }]
+            )
+            setLoading(false)
+            return
+          }
+          
+          if (!hospitalData.isVerified) {
+            // Sign out the user since they can't access the system
+            await signOut(auth)
+            Alert.alert(
+              'Account Pending Verification',
+              'Your hospital account is pending admin verification. Please wait for approval before you can access the system.',
+              [{ text: 'OK' }]
+            )
+            setLoading(false)
+            return
+          }
+        }
+
+        // Only set user and userData after verification checks pass
+        setUser(userCredential.user)
+        
+        const userDataToSet = {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          displayName: userCredential.user.displayName || userDoc.data()?.displayName || null,
+          role,
+          photoURL: userCredential.user.photoURL || null,
+          doctorData,
+          hospitalData
+        }
+
         setUserData(userDataToSet)
 
         // Navigate based on role
@@ -140,6 +174,8 @@ export default function Login() {
           router.replace('/patient/home')
         } else if (role === 'doctor') {
           router.replace('/doctor/schedule')
+        } else if (role === 'hospital') {
+          router.replace('/hospital')
         } else if (role === 'admin') {
           router.replace('/admin')
         }
@@ -178,7 +214,7 @@ export default function Login() {
         >
           {/* Back Button */}
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => router.push('/role-selection')}
             className="mb-4 self-start"
           >
             <Ionicons name="arrow-back" size={24} color={roleInfo.color} />

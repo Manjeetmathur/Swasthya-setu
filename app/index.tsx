@@ -23,6 +23,14 @@ export default function Index() {
           }
         } else if (userData.role === 'admin') {
           router.replace('/admin')
+        } else if (userData.role === 'hospital') {
+          // Check if hospital is verified before redirecting
+          if (userData.hospitalData && userData.hospitalData.isVerified) {
+            router.replace('/hospital')
+          } else {
+            // If hospital is not verified, redirect to login
+            router.replace('/login')
+          }
         } else {
           router.replace('/login')
         }
