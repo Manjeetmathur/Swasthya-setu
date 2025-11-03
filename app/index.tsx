@@ -27,7 +27,7 @@ export default function Index() {
           router.replace('/login')
         }
       } else {
-        router.replace('/login')
+        router.replace('/role-selection')
       }
     }
   }, [isLoading, isAuthenticated, userData, router])

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native'
-import { useRouter } from 'expo-router'
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity } from 'react-native'
+import { useRouter, useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, db } from '@/lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
@@ -11,10 +12,46 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function Login() {
   const router = useRouter()
+  const { role } = useLocalSearchParams<{ role: string }>()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { setUser, setUserData, userData, isAuthenticated, logout } = useAuthStore()
+
+  const getRoleInfo = () => {
+    switch (role) {
+      case 'patient':
+        return {
+          title: 'Patient Login',
+          subtitle: 'Access your health records and book appointments',
+          icon: 'person' as const,
+          color: '#2563eb'
+        }
+      case 'doctor':
+        return {
+          title: 'Doctor Login',
+          subtitle: 'Manage your practice and consult patients',
+          icon: 'medical' as const,
+          color: '#16a34a'
+        }
+      case 'hospital':
+        return {
+          title: 'Hospital Login',
+          subtitle: 'Manage hospital operations and staff',
+          icon: 'business' as const,
+          color: '#9333ea'
+        }
+      default:
+        return {
+          title: 'Welcome Back',
+          subtitle: 'Sign in to continue to Swasthya Setu',
+          icon: 'log-in' as const,
+          color: '#2563eb'
+        }
+    }
+  }
+
+  const roleInfo = getRoleInfo()
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -139,13 +176,27 @@ export default function Login() {
           contentContainerClassName="flex-grow px-6 py-8"
           keyboardShouldPersistTaps="handled"
         >
+          {/* Back Button */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="mb-4 self-start"
+          >
+            <Ionicons name="arrow-back" size={24} color={roleInfo.color} />
+          </TouchableOpacity>
+
           <View className="flex-1 justify-center">
-            <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Welcome Back
-            </Text>
-            <Text className="text-gray-600 dark:text-gray-400 mb-8">
-              Sign in to continue to TeleHealth Connect
-            </Text>
+            {/* Role-specific header */}
+            <View className="items-center mb-8">
+              <View className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
+                <Ionicons name={roleInfo.icon} size={32} color={roleInfo.color} />
+              </View>
+              <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                {roleInfo.title}
+              </Text>
+              <Text className="text-gray-600 dark:text-gray-400 text-center">
+                {roleInfo.subtitle}
+              </Text>
+            </View>
 
             <Input
               label="Email"
@@ -184,7 +235,7 @@ export default function Login() {
               </Text>
               <Text
                 className="text-blue-600 font-semibold"
-                onPress={() => router.push('/signup')}
+                onPress={() => router.push(`/signup${role ? `?role=${role}` : ''}`)}
               >
                 Sign Up
               </Text>
