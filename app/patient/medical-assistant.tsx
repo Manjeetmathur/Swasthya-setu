@@ -274,7 +274,7 @@ export default function MedicalAssistant() {
               className={`mb-4 ${message.isUser ? 'items-end' : 'items-start'}`}
             >
               <View
-                className={`w-[70%] p-3 rounded-lg ${
+                className={`w-flex p-3 rounded-lg ${
                   message.isUser
                     ? 'bg-blue-600 rounded-br-sm'
                     : 'bg-gray-100 dark:bg-gray-800 rounded-bl-sm'
