@@ -6,59 +6,21 @@ import { useAuthStore } from '@/stores/authStore'
 import { useAppointmentsStore, Appointment } from '@/stores/appointmentsStore'
 import { useCallStore, CallData } from '@/stores/callStore'
 import { useEmergencyStore } from '@/stores/emergencyStore'
-import { auth, db} from '@/lib/firebase'
-import { signOut } from 'firebase/auth'
-import { doc, getDoc, Timestamp } from 'firebase/firestore'
-import { collection, query, where, getDocs } from 'firebase/firestore'
-import Button from '@/components/Button'
+import { db} from '@/lib/firebase'
+import { doc, getDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore'
 import EmergencyDialog from '@/components/EmergencyDialog'
-import EmergencyAlert from '@/components/EmergencyAlert'
-import EmergencyServicesSection from '@/components/EmergencyServicesSection'
 import { Ionicons } from '@expo/vector-icons'
 import VideoCall from '@/components/VideoCall'
 import OutgoingCall from '@/components/OutgoingCall'
-
-interface Doctor {
-  id: string
-  displayName: string
-  email: string
-  doctorData?: {
-    medicalLicense: string
-    specialization: string
-    experience: number
-    qualifications: string
-    certifications: string[]
-    hospitalAffiliation?: string
-    consultationFee?: number
-    isVerified: boolean
-  }
-}
-
-interface Hospital {
-  id: string
-  hospitalData: {
-    hospitalName: string
-    hospitalType: string
-    hospitalLicense: string
-    address: string
-    city: string
-    state: string
-    pincode: string
-    phoneNumber: string
-    emergencyNumber?: string
-    totalBeds: number
-    icuBeds?: number
-    specialties: string[]
-    facilities: string[]
-    accreditation?: string
-    establishedYear?: number
-    isVerified: boolean
-  }
-}
+import HomeHeader from '@/components/patient/HomeHeader'
+import QuickActionsSection from '@/components/patient/QuickActionsSection'
+import ServicesSection from '@/components/patient/ServicesSection'
+import AppointmentsSection from '@/components/patient/AppointmentsSection'
+import { Doctor, Hospital } from '@/types'
 
 export default function PatientHome() {
   const router = useRouter()
-  const { userData, logout } = useAuthStore()
+  const { userData } = useAuthStore()
   const { appointments, subscribeToAppointments, isLoading } = useAppointmentsStore()
   const { initiateCall, currentCall, setCurrentCall, subscribeToIncomingCalls } = useCallStore()
   const { activeAlert, cancelEmergency } = useEmergencyStore()
@@ -215,16 +177,6 @@ export default function PatientHome() {
     )
   }
 
-  const handleLogout = async () => {
-    try {
-      await logout()
-      await signOut(auth)
-      // Use replace to clear navigation history
-      router.replace('/role-selection')
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
 
   const handleDoctorClick = async (appointment: Appointment) => {
     setLoadingDoctor(true)
@@ -354,9 +306,6 @@ export default function PatientHome() {
     setIsInitiatingVoiceCall(false)
   }
 
-  const upcomingAppointments = appointments.filter(
-    (apt) => apt.status === 'confirmed' || apt.status === 'pending'
-  ).slice(0, 3)
 
   // Show video call interface if there's an active connected call
   if (currentCall && currentCall.status === 'connected') {
@@ -390,271 +339,24 @@ export default function PatientHome() {
         }
       >
         <View className="px-6 py-4">
-          <View className="flex-row justify-between items-center mb-6">
-            <View>
-              <Text className="text-2xl font-bold text-gray-900 dark:text-white">
-                Welcome back,
-              </Text>
-              <Text className="text-xl text-gray-600 dark:text-gray-400">
-                {userData?.displayName || 'Patient'}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => router.push('/patient/profile')}>
-              <Ionicons name="person-outline" size={24} color="#6b7280" />
-            </TouchableOpacity>
-          </View>
+          <HomeHeader userName={userData?.displayName || undefined} />
 
-          <View className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
-            <Text className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
-              Quick Actions
-            </Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className="flex-1 bg-blue-600 rounded-lg p-4 items-center"
-                onPress={() => router.push('/patient/book')}
-              >
-                <Ionicons name="calendar-outline" size={24} color="#ffffff" />
-                <Text className="text-white font-semibold mt-2">Book Appointment</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-green-600 rounded-lg p-4 items-center"
-                onPress={() => router.push('/patient/chat')}
-              >
-                <Ionicons name="chatbubbles-outline" size={24} color="#ffffff" />
-                <Text className="text-white font-semibold mt-2">Chat</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <QuickActionsSection />
 
-          {/* Active Emergency Alert */}
-          {activeAlert && (
-            <EmergencyAlert
-              alert={activeAlert}
-              onCancel={handleCancelEmergency}
-            />
-          )}
-
-          {/* Emergency Services Section */}
-          <EmergencyServicesSection
-            onEmergency={() => setEmergencyDialogVisible(true)}
+          <ServicesSection
+            activeAlert={activeAlert}
+            onCancelEmergency={handleCancelEmergency}
+            onEmergencyPress={() => setEmergencyDialogVisible(true)}
+            hospitals={hospitals}
+            loadingHospitals={loadingHospitals}
+            onHospitalPress={handleHospitalPress}
           />
 
-          {/* Medical AI Assistant Cards */}
-          <View className="mb-6">
-            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              AI Health Assistant
-            </Text>
-            
-           
-
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-800"
-                onPress={() => router.push('/patient/medicine-info')}
-              >
-                <Ionicons name="medical" size={24} color="#8b5cf6" />
-                <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
-                  Medicine Info
-                </Text>
-                <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-                  Uses & side effects
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-800"
-                onPress={() => router.push('/patient/symptoms-check')}
-              >
-                <Ionicons name="medical" size={24} color="#3b82f6" />
-                <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
-                  Symptoms Check
-                </Text>
-                <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-                  Health guidance
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-800"
-                onPress={() => router.push('/patient/health-tips')}
-              >
-                <Ionicons name="heart" size={24} color="#10b981" />
-                <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
-                  Health Tips
-                </Text>
-                <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-                  Wellness advice
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* E-Hospital Section */}
-          <View className="mb-6">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-xl font-bold text-gray-900 dark:text-white">
-                E-Hospital
-              </Text>
-              {hospitals.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => router.push('/patient/hospitals')}
-                  className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1.5 rounded-full"
-                >
-                  <Text className="text-purple-700 dark:text-purple-300 text-sm font-semibold">
-                    View All
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            
-            {loadingHospitals ? (
-              <Text className="text-gray-500 text-center py-8">Loading hospitals...</Text>
-            ) : hospitals.length === 0 ? (
-              <View className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 items-center">
-                <Ionicons name="business-outline" size={48} color="#9ca3af" />
-                <Text className="text-gray-500 dark:text-gray-400 mt-4 text-center">
-                  No verified hospitals available
-                </Text>
-              </View>
-            ) : (
-              <View className="gap-3">
-                {hospitals.slice(0, 2).map((hospital) => (
-                  <TouchableOpacity
-                    key={hospital.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
-                    onPress={() => handleHospitalPress(hospital)}
-                  >
-                    <View className="flex-row items-center mb-3">
-                      <View className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg mr-3">
-                        <Ionicons name="business" size={24} color="#8b5cf6" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-lg font-semibold text-gray-900 dark:text-white" numberOfLines={1}>
-                          {hospital.hospitalData.hospitalName}
-                        </Text>
-                        <Text className="text-sm text-gray-600 dark:text-gray-400">
-                          {hospital.hospitalData.hospitalType}
-                        </Text>
-                      </View>
-                      <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">
-                        <Text className="text-xs font-semibold text-green-700 dark:text-green-300">
-                          VERIFIED
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    <View className="flex-row items-center mb-2">
-                      <Ionicons name="location" size={16} color="#6b7280" />
-                      <Text className="text-sm text-gray-600 dark:text-gray-400 ml-1" numberOfLines={1}>
-                        {hospital.hospitalData.city}, {hospital.hospitalData.state}
-                      </Text>
-                    </View>
-                    
-                    {hospital.hospitalData.specialties.length > 0 && (
-                      <View className="mb-2">
-                        <View className="flex-row flex-wrap gap-1">
-                          {hospital.hospitalData.specialties.slice(0, 2).map((specialty, index) => (
-                            <View key={index} className="bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
-                              <Text className="text-xs text-blue-700 dark:text-blue-300">
-                                {specialty}
-                              </Text>
-                            </View>
-                          ))}
-                          {hospital.hospitalData.specialties.length > 2 && (
-                            <View className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                              <Text className="text-xs text-gray-600 dark:text-gray-400">
-                                +{hospital.hospitalData.specialties.length - 2} more
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    )}
-                    
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center">
-                        <Ionicons name="bed" size={14} color="#6b7280" />
-                        <Text className="text-sm text-gray-600 dark:text-gray-400 ml-1">
-                          {hospital.hospitalData.totalBeds} beds
-                        </Text>
-                        {hospital.hospitalData.icuBeds && (
-                          <>
-                            <Text className="text-gray-400 mx-2">•</Text>
-                            <Text className="text-sm text-gray-600 dark:text-gray-400">
-                              {hospital.hospitalData.icuBeds} ICU
-                            </Text>
-                          </>
-                        )}
-                      </View>
-                      <Text className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                        Tap for details →
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-
-          <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Upcoming Appointments
-          </Text>
-
-          {isLoading ? (
-            <Text className="text-gray-500 text-center py-8">Loading appointments...</Text>
-          ) : upcomingAppointments.length === 0 ? (
-            <View className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 items-center">
-              <Ionicons name="calendar-outline" size={48} color="#9ca3af" />
-              <Text className="text-gray-500 dark:text-gray-400 mt-4 text-center">
-                No upcoming appointments
-              </Text>
-              <Button
-                title="Book Your First Appointment"
-                onPress={() => router.push('/patient/book')}
-                className="mt-4"
-                size="sm"
-              />
-            </View>
-          ) : (
-            upcomingAppointments.map((appointment) => (
-              <TouchableOpacity
-                key={appointment.id}
-                onPress={() => handleDoctorClick(appointment)}
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-3 border border-gray-200 dark:border-gray-700"
-              >
-                <View className="flex-row justify-between items-start">
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Dr. {appointment.doctorName}
-                    </Text>
-                    <Text className="text-gray-600 dark:text-gray-400 mt-1">
-                      {appointment.date.toDate().toLocaleDateString()} at {appointment.time}
-                    </Text>
-                    <Text className="text-gray-500 dark:text-gray-500 text-sm mt-1">
-                      Reason: {appointment.reason}
-                    </Text>
-                  </View>
-                  <View
-                    className={`px-3 py-1 rounded-full ${
-                      appointment.status === 'confirmed'
-                        ? 'bg-green-100 dark:bg-green-900/30'
-                        : 'bg-yellow-100 dark:bg-yellow-900/30'
-                    }`}
-                  >
-                    <Text
-                      className={`text-xs font-semibold ${
-                        appointment.status === 'confirmed'
-                          ? 'text-green-700 dark:text-green-300'
-                          : 'text-yellow-700 dark:text-yellow-300'
-                      }`}
-                    >
-                      {appointment.status.toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
+          <AppointmentsSection
+            appointments={appointments}
+            isLoading={isLoading}
+            onAppointmentPress={handleDoctorClick}
+          />
         </View>
       </ScrollView>
 
