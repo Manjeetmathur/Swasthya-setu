@@ -411,17 +411,17 @@ export default function PatientHome() {
             <View className="flex-row gap-3">
               <TouchableOpacity
                 className="flex-1 bg-blue-600 rounded-lg p-4 items-center"
-                onPress={() => router.push('/patient/book')}
+                onPress={() => router.push('/patient/hospitals')}
               >
-                <Ionicons name="calendar-outline" size={24} color="#ffffff" />
-                <Text className="text-white font-semibold mt-2">Book Appointment</Text>
+                <Ionicons name="business-outline" size={24} color="#ffffff" />
+                <Text className="text-white font-semibold mt-2">Book Hospital Appointment</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 className="flex-1 bg-green-600 rounded-lg p-4 items-center"
-                onPress={() => router.push('/patient/chat')}
+                onPress={() => router.push('/patient/book')}
               >
-                <Ionicons name="chatbubbles-outline" size={24} color="#ffffff" />
-                <Text className="text-white font-semibold mt-2">Chat</Text>
+                <Ionicons name="calendar-outline" size={24} color="#ffffff" />
+                <Text className="text-white font-semibold mt-2">Book Doctor Appointment</Text>
               </TouchableOpacity>
             </View>
           </View>
