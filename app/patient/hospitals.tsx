@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert, Linking } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert, Linking, TextInput } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Ionicons } from '@expo/vector-icons'
+import { useBedManagementStore } from '@/stores/bedManagementStore'
+import { useAuthStore } from '@/stores/authStore'
 
 interface Hospital {
   id: string
@@ -30,11 +32,17 @@ interface Hospital {
 
 export default function AllHospitals() {
   const router = useRouter()
+  const { userData } = useAuthStore()
+  const { beds, subscribeToBeds, bookBed, getBedStats, isLoading: bedLoading } = useBedManagementStore()
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null)
   const [hospitalModalVisible, setHospitalModalVisible] = useState(false)
+  const [bedStats, setBedStats] = useState<{total: number, available: number, occupied: number, maintenance: number} | null>(null)
+  const [showBedBooking, setShowBedBooking] = useState(false)
+  const [selectedBedType, setSelectedBedType] = useState<'general' | 'icu'>('general')
+  const [bookingReason, setBookingReason] = useState('')
 
   useEffect(() => {
     fetchApprovedHospitals()
@@ -80,7 +88,18 @@ export default function AllHospitals() {
   const handleHospitalPress = (hospital: Hospital) => {
     setSelectedHospital(hospital)
     setHospitalModalVisible(true)
+    
+    // Subscribe to beds for this hospital
+    subscribeToBeds(undefined, hospital.id)
   }
+
+  // Update bed stats when beds change
+  useEffect(() => {
+    if (beds.length > 0) {
+      const stats = getBedStats()
+      setBedStats(stats)
+    }
+  }, [beds, getBedStats])
 
   const handleCallHospital = (phoneNumber: string) => {
     Alert.alert(
@@ -134,6 +153,62 @@ export default function AllHospitals() {
         }
       ]
     )
+  }
+
+  const handleBookBed = async () => {
+    if (!selectedHospital || !userData) {
+      Alert.alert('Error', 'Missing hospital or user data')
+      return
+    }
+
+    if (!bookingReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for bed booking')
+      return
+    }
+
+    try {
+      const availableBeds = beds.filter(bed => 
+        bed.type === selectedBedType && 
+        bed.status === 'available' &&
+        bed.hospitalId === selectedHospital.id
+      )
+
+      if (availableBeds.length === 0) {
+        Alert.alert('No Beds Available', `No ${selectedBedType} beds are currently available at this hospital.`)
+        return
+      }
+
+      const selectedBed = availableBeds[0] // Take the first available bed
+
+      await bookBed(
+        userData.uid,
+        '', // No doctor ID for direct patient booking
+        userData.displayName || 'Patient',
+        '', // No doctor name
+        selectedBed.id,
+        selectedBed.ward,
+        selectedBedType,
+        'normal',
+        bookingReason
+      )
+
+      Alert.alert(
+        'Booking Submitted',
+        `Your ${selectedBedType} bed booking request has been submitted. The hospital will review and confirm your booking.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowBedBooking(false)
+              setBookingReason('')
+            }
+          }
+        ]
+      )
+    } catch (error) {
+      console.error('Error booking bed:', error)
+      Alert.alert('Error', 'Failed to submit bed booking request')
+    }
   }
 
   return (
@@ -409,6 +484,99 @@ export default function AllHospitals() {
                 </View>
               </View>
 
+              {/* Real-time Bed Availability */}
+              <View className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700">
+                <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                  Real-time Bed Availability
+                </Text>
+                
+                {bedLoading ? (
+                  <Text className="text-gray-500 text-center py-4">Loading bed information...</Text>
+                ) : bedStats ? (
+                  <View>
+                    {/* General Beds */}
+                    <View className="mb-4">
+                      <View className="flex-row items-center justify-between mb-2">
+                        <Text className="text-gray-700 dark:text-gray-300 font-medium">General Beds</Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedBedType('general')
+                            setShowBedBooking(true)
+                          }}
+                          className="bg-blue-600 px-3 py-1 rounded-full"
+                        >
+                          <Text className="text-white text-xs font-medium">Book Bed</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View className="flex-row items-center">
+                        <View className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-3">
+                          <View 
+                            className="bg-green-500 h-2 rounded-full" 
+                            style={{ 
+                              width: `${bedStats.total > 0 ? (bedStats.available / bedStats.total) * 100 : 0}%` 
+                            }} 
+                          />
+                        </View>
+                        <Text className="text-sm text-gray-600 dark:text-gray-400">
+                          {beds.filter(b => b.type === 'general' && b.status === 'available').length} / {beds.filter(b => b.type === 'general').length} available
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* ICU Beds */}
+                    <View className="mb-4">
+                      <View className="flex-row items-center justify-between mb-2">
+                        <Text className="text-gray-700 dark:text-gray-300 font-medium">ICU Beds</Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedBedType('icu')
+                            setShowBedBooking(true)
+                          }}
+                          className="bg-red-600 px-3 py-1 rounded-full"
+                        >
+                          <Text className="text-white text-xs font-medium">Book ICU</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View className="flex-row items-center">
+                        <View className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-3">
+                          <View 
+                            className="bg-orange-500 h-2 rounded-full" 
+                            style={{ 
+                              width: `${beds.filter(b => b.type === 'icu').length > 0 ? (beds.filter(b => b.type === 'icu' && b.status === 'available').length / beds.filter(b => b.type === 'icu').length) * 100 : 0}%` 
+                            }} 
+                          />
+                        </View>
+                        <Text className="text-sm text-gray-600 dark:text-gray-400">
+                          {beds.filter(b => b.type === 'icu' && b.status === 'available').length} / {beds.filter(b => b.type === 'icu').length} available
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Overall Stats */}
+                    <View className="flex-row justify-between pt-3 border-t border-gray-200 dark:border-gray-600">
+                      <View className="items-center">
+                        <Text className="text-green-600 dark:text-green-400 font-bold text-lg">{bedStats.available}</Text>
+                        <Text className="text-xs text-gray-500">Available</Text>
+                      </View>
+                      <View className="items-center">
+                        <Text className="text-red-600 dark:text-red-400 font-bold text-lg">{bedStats.occupied}</Text>
+                        <Text className="text-xs text-gray-500">Occupied</Text>
+                      </View>
+                      <View className="items-center">
+                        <Text className="text-yellow-600 dark:text-yellow-400 font-bold text-lg">{bedStats.maintenance}</Text>
+                        <Text className="text-xs text-gray-500">Maintenance</Text>
+                      </View>
+                      <View className="items-center">
+                        <Text className="text-gray-600 dark:text-gray-400 font-bold text-lg">{bedStats.total}</Text>
+                        <Text className="text-xs text-gray-500">Total</Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <Text className="text-gray-500 text-center py-4">Bed information not available</Text>
+                )}
+              </View>
+
               {/* Specialties */}
               {selectedHospital.hospitalData.specialties.length > 0 && (
                 <View className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700">
@@ -468,6 +636,121 @@ export default function AllHospitals() {
             </ScrollView>
           )}
         </SafeAreaView>
+      </Modal>
+
+      {/* Bed Booking Modal */}
+      <Modal
+        visible={showBedBooking}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowBedBooking(false)}
+      >
+        <View className="flex-1 justify-center bg-black/50 px-6">
+          <View className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden">
+            <View className="flex-row items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                Book {selectedBedType === 'icu' ? 'ICU' : 'General'} Bed
+              </Text>
+              <TouchableOpacity onPress={() => setShowBedBooking(false)}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <View className="p-6">
+              {selectedHospital && (
+                <View className="mb-4">
+                  <Text className="text-gray-600 dark:text-gray-400 text-sm mb-1">Hospital</Text>
+                  <Text className="text-gray-900 dark:text-white font-medium">
+                    {selectedHospital.hospitalData.hospitalName}
+                  </Text>
+                </View>
+              )}
+
+              <View className="mb-4">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-1">Bed Type</Text>
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    onPress={() => setSelectedBedType('general')}
+                    className={`flex-1 p-3 rounded-lg border-2 ${
+                      selectedBedType === 'general'
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    <Text className={`text-center font-medium ${
+                      selectedBedType === 'general'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      General Bed
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setSelectedBedType('icu')}
+                    className={`flex-1 p-3 rounded-lg border-2 ${
+                      selectedBedType === 'icu'
+                        ? 'border-red-600 bg-red-50 dark:bg-red-900/20'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    <Text className={`text-center font-medium ${
+                      selectedBedType === 'icu'
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      ICU Bed
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View className="mb-4">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Available Beds</Text>
+                <Text className="text-gray-900 dark:text-white font-medium">
+                  {beds.filter(b => b.type === selectedBedType && b.status === 'available' && b.hospitalId === selectedHospital?.id).length} beds available
+                </Text>
+              </View>
+
+              <View className="mb-6">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Reason for Admission *</Text>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-gray-900 dark:text-white min-h-[80px]"
+                  placeholder="Describe why you need the bed..."
+                  placeholderTextColor="#9ca3af"
+                  value={bookingReason}
+                  onChangeText={setBookingReason}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={() => setShowBedBooking(false)}
+                  className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-4 items-center"
+                >
+                  <Text className="text-gray-700 dark:text-gray-300 font-semibold">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleBookBed}
+                  disabled={!bookingReason.trim() || bedLoading}
+                  className={`flex-1 rounded-lg p-4 items-center ${
+                    !bookingReason.trim() || bedLoading
+                      ? 'bg-gray-300 dark:bg-gray-600'
+                      : selectedBedType === 'icu'
+                      ? 'bg-red-600'
+                      : 'bg-blue-600'
+                  }`}
+                >
+                  <Text className="text-white font-semibold">
+                    {bedLoading ? 'Booking...' : 'Submit Request'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   )

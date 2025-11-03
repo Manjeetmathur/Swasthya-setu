@@ -39,6 +39,19 @@ export default function SessionSummary() {
   const [bedUrgency, setBedUrgency] = useState<'normal' | 'urgent' | 'emergency'>('normal')
   const [bedReason, setBedReason] = useState('')
 
+  // Helper function to safely convert timestamp to Date
+  const getDateFromTimestamp = (timestamp: any): Date | null => {
+    if (!timestamp) return null
+    if (timestamp instanceof Date) return timestamp
+    if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate()
+    }
+    if (timestamp?.seconds) {
+      return new Date(timestamp.seconds * 1000)
+    }
+    return new Date(timestamp)
+  }
+
   useEffect(() => {
     // Create call object from params
     if (callId && patientId && patientName && userData) {
@@ -192,7 +205,7 @@ export default function SessionSummary() {
           Patient: {call.patientName}
         </Text>
         <Text className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Session ended at {call.endTime?.toDate().toLocaleString()}
+          Session ended at {call.endTime ? getDateFromTimestamp(call.endTime)?.toLocaleString() || 'N/A' : 'N/A'}
         </Text>
       </View>
 
