@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Doctor } from '@/types'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface DoctorListModalProps {
   visible: boolean
@@ -14,6 +15,7 @@ interface DoctorListModalProps {
 
 export default function DoctorListModal({ visible, onClose, onDoctorSelect }: DoctorListModalProps) {
   const router = useRouter()
+  const { t } = useLanguageStore()
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -73,7 +75,7 @@ export default function DoctorListModal({ visible, onClose, onDoctorSelect }: Do
       <View className="flex-1 bg-white dark:bg-gray-900">
         <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <Text className="text-xl font-bold text-gray-900 dark:text-white">
-            Select Doctor
+            {t('home.select_doctor')}
           </Text>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={24} color="#6b7280" />
@@ -83,13 +85,13 @@ export default function DoctorListModal({ visible, onClose, onDoctorSelect }: Do
         {loading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#9333ea" />
-            <Text className="text-gray-600 dark:text-gray-400 mt-4">Loading doctors...</Text>
+            <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('home.loading')}</Text>
           </View>
         ) : doctors.length === 0 ? (
           <View className="flex-1 items-center justify-center px-6">
             <Ionicons name="medical-outline" size={64} color="#9ca3af" />
             <Text className="text-gray-600 dark:text-gray-400 mt-4 text-center">
-              No verified doctors available
+              {t('home.no_verified_doctors')}
             </Text>
           </View>
         ) : (
@@ -113,7 +115,7 @@ export default function DoctorListModal({ visible, onClose, onDoctorSelect }: Do
                         {doctor.doctorData?.isVerified && (
                           <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full ml-2">
                             <Text className="text-xs font-semibold text-green-700 dark:text-green-300">
-                              VERIFIED
+                              {t('home.verified')}
                             </Text>
                           </View>
                         )}
@@ -126,7 +128,7 @@ export default function DoctorListModal({ visible, onClose, onDoctorSelect }: Do
                       <View className="flex-row items-center mt-1">
                         {doctor.doctorData?.experience && (
                           <Text className="text-sm text-gray-600 dark:text-gray-400">
-                            {doctor.doctorData.experience} years experience
+                            {doctor.doctorData.experience} {t('home.years_experience')}
                           </Text>
                         )}
                         {doctor.doctorData?.consultationFee && (

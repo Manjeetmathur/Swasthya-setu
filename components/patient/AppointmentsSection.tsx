@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import { Appointment } from '@/stores/appointmentsStore'
 import Button from '@/components/Button'
 import { Ionicons } from '@expo/vector-icons'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface AppointmentsSectionProps {
   appointments: Appointment[]
@@ -16,6 +17,7 @@ export default function AppointmentsSection({
   onAppointmentPress
 }: AppointmentsSectionProps) {
   const router = useRouter()
+  const { t } = useLanguageStore()
   const upcomingAppointments = appointments.filter(
     (apt) => apt.status === 'confirmed' || apt.status === 'pending'
   ).slice(0, 3)
@@ -23,19 +25,19 @@ export default function AppointmentsSection({
   return (
     <View>
       <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-        Upcoming Appointments
+        {t('home.upcoming_appointments')}
       </Text>
 
       {isLoading ? (
-        <Text className="text-gray-500 text-center py-8">Loading appointments...</Text>
+        <Text className="text-gray-500 text-center py-8">{t('home.loading_appointments')}</Text>
       ) : upcomingAppointments.length === 0 ? (
         <View className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 items-center">
           <Ionicons name="calendar-outline" size={48} color="#9ca3af" />
           <Text className="text-gray-500 dark:text-gray-400 mt-4 text-center">
-            No upcoming appointments
+            {t('home.no_appointments')}
           </Text>
           <Button
-            title="Book Your First Appointment"
+            title={t('home.book_first_appointment')}
             onPress={() => router.push('/patient/book')}
             className="mt-4"
             size="sm"
@@ -57,7 +59,7 @@ export default function AppointmentsSection({
                   {appointment.date.toDate().toLocaleDateString()} at {appointment.time}
                 </Text>
                 <Text className="text-gray-500 dark:text-gray-500 text-sm mt-1">
-                  Reason: {appointment.reason}
+                  {t('home.reason')}: {appointment.reason}
                 </Text>
               </View>
               <View

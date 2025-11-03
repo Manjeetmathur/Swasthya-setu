@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import { auth , db } from '@/lib/firebase'
 import { signOut, updatePassword } from 'firebase/auth'
 import { doc, updateDoc } from 'firebase/firestore'
@@ -17,12 +18,16 @@ export default function PatientProfile() {
   const router = useRouter()
   const { userData, logout, setUserData } = useAuthStore()
   const { theme, isDark, setTheme, initializeTheme } = useThemeStore()
+  const { language, setLanguage, t } = useLanguageStore()
   const [isEditing, setIsEditing] = useState(false)
   const [displayName, setDisplayName] = useState(userData?.displayName || '')
   const [profileImage, setProfileImage] = useState(userData?.profileImage || null)
   const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [showPrivacySection, setShowPrivacySection] = useState(false)
   const [showAboutSection, setShowAboutSection] = useState(false)
   const [showContactSection, setShowContactSection] = useState(false)
+  const [showLanguageSection, setShowLanguageSection] = useState(false)
+  const [selectedLanguage, setSelectedLanguage] = useState(language)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -31,6 +36,10 @@ export default function PatientProfile() {
   useEffect(() => {
     initializeTheme()
   }, [])
+
+  useEffect(() => {
+    setSelectedLanguage(language)
+  }, [language])
 
   const handlePickImage = async () => {
     try {
@@ -140,7 +149,7 @@ export default function PatientProfile() {
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
       <ScrollView className="flex-1 px-6 py-4">
         <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          My Profile
+          {t('profile.title')}
         </Text>
 
         {/* Profile Info Card */}
@@ -182,20 +191,20 @@ export default function PatientProfile() {
           {isEditing ? (
             <View>
               <Input
-                label="Full Name"
+                label={t('profile.personal_info')}
                 value={displayName}
                 onChangeText={setDisplayName}
                 placeholder="Enter your full name"
               />
               <View className="flex-row gap-3 mt-4">
                 <Button
-                  title="Save"
+                  title={t('profile.save_changes')}
                   onPress={handleSaveProfile}
                   loading={loading}
                   className="flex-1"
                 />
                 <Button
-                  title="Cancel"
+                  title={t('profile.cancel')}
                   onPress={() => {
                     setIsEditing(false)
                     setDisplayName(userData?.displayName || '')
@@ -208,7 +217,7 @@ export default function PatientProfile() {
             </View>
           ) : (
             <Button
-              title="Edit Profile"
+              title={t('profile.edit_profile')}
               onPress={() => setIsEditing(true)}
               variant="outline"
             />
@@ -218,7 +227,7 @@ export default function PatientProfile() {
         {/* Account Settings */}
         <View className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
           <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Account Settings
+            {t('profile.account_settings')}
           </Text>
 
           {/* Theme Toggle */}
@@ -233,11 +242,91 @@ export default function PatientProfile() {
                 color="#6b7280" 
               />
               <Text className="text-gray-900 dark:text-white ml-3">
-                {isDark ? 'Dark Mode' : 'Light Mode'}
+                {t('profile.theme')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#6b7280" />
           </TouchableOpacity>
+
+          {/* Language Switch */}
+          <TouchableOpacity
+            className="flex-row items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700"
+            onPress={() => setShowLanguageSection(!showLanguageSection)}
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="language" size={20} color="#6b7280" />
+              <Text className="text-gray-900 dark:text-white ml-3">{t('profile.language')}</Text>
+            </View>
+            <View className="flex-row items-center">
+              <Text className="text-gray-500 dark:text-gray-400 mr-2">
+                {selectedLanguage === 'English' ? t('profile.english') : t('profile.hindi')}
+              </Text>
+              <Ionicons 
+                name={showLanguageSection ? "chevron-down" : "chevron-forward"} 
+                size={20} 
+                color="#6b7280" 
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Language Options - Only show when toggled */}
+          {showLanguageSection && (
+            <View className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <TouchableOpacity
+                className={`flex-row items-center justify-between py-3 px-4 rounded-lg mb-2 ${
+                  selectedLanguage === 'English' 
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
+                    : 'bg-gray-50 dark:bg-gray-700'
+                }`}
+                onPress={() => {
+                  setSelectedLanguage('English')
+                  setLanguage('English')
+                  setShowLanguageSection(false)
+                }}
+              >
+                <View className="flex-row items-center">
+                  <Text className="text-2xl mr-3">🇺🇸</Text>
+                  <Text className={`font-medium ${
+                    selectedLanguage === 'English' 
+                      ? 'text-blue-700 dark:text-blue-300' 
+                      : 'text-gray-900 dark:text-white'
+                  }`}>
+                    {t('profile.english')}
+                  </Text>
+                </View>
+                {selectedLanguage === 'English' && (
+                  <Ionicons name="checkmark-circle" size={20} color="#2563eb" />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className={`flex-row items-center justify-between py-3 px-4 rounded-lg ${
+                  selectedLanguage === 'Hindi' 
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' 
+                    : 'bg-gray-50 dark:bg-gray-700'
+                }`}
+                onPress={() => {
+                  setSelectedLanguage('Hindi')
+                  setLanguage('Hindi')
+                  setShowLanguageSection(false)
+                }}
+              >
+                <View className="flex-row items-center">
+                  <Text className="text-2xl mr-3">🇮🇳</Text>
+                  <Text className={`font-medium ${
+                    selectedLanguage === 'Hindi' 
+                      ? 'text-blue-700 dark:text-blue-300' 
+                      : 'text-gray-900 dark:text-white'
+                  }`}>
+                    {t('profile.hindi')}
+                  </Text>
+                </View>
+                {selectedLanguage === 'Hindi' && (
+                  <Ionicons name="checkmark-circle" size={20} color="#2563eb" />
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
           <TouchableOpacity
             className="flex-row items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700"
@@ -252,7 +341,7 @@ export default function PatientProfile() {
           >
             <View className="flex-row items-center">
               <Ionicons name="lock-closed-outline" size={20} color="#6b7280" />
-              <Text className="text-gray-900 dark:text-white ml-3">Change Password</Text>
+              <Text className="text-gray-900 dark:text-white ml-3">{t('profile.change_password')}</Text>
             </View>
             <Ionicons 
               name={showPasswordForm ? "chevron-down" : "chevron-forward"} 
@@ -267,7 +356,7 @@ export default function PatientProfile() {
           >
             <View className="flex-row items-center">
               <Ionicons name="notifications-outline" size={20} color="#6b7280" />
-              <Text className="text-gray-900 dark:text-white ml-3">Notifications</Text>
+              <Text className="text-gray-900 dark:text-white ml-3">{t('profile.notifications')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#6b7280" />
           </TouchableOpacity>
@@ -287,7 +376,7 @@ export default function PatientProfile() {
           {showPasswordForm && (
             <View className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Input
-                label="Current Password"
+                label={t('profile.current_password')}
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 secureTextEntry
@@ -295,7 +384,7 @@ export default function PatientProfile() {
               />
 
               <Input
-                label="New Password"
+                label={t('profile.new_password')}
                 value={newPassword}
                 onChangeText={setNewPassword}
                 secureTextEntry
@@ -303,7 +392,7 @@ export default function PatientProfile() {
               />
 
               <Input
-                label="Confirm New Password"
+                label={t('profile.confirm_password')}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
@@ -311,7 +400,7 @@ export default function PatientProfile() {
               />
 
               <Button
-                title="Update Password"
+                title={t('profile.update_password')}
                 onPress={handleChangePassword}
                 loading={loading}
                 className="mt-4"
@@ -320,10 +409,87 @@ export default function PatientProfile() {
           )}
         </View>
 
+        {/* Privacy & Security Section */}
+        <View className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+          <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            {t('profile.privacy_security')}
+          </Text>
+
+          <TouchableOpacity
+            className="flex-row items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700"
+            onPress={() => setShowPrivacySection(!showPrivacySection)}
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="shield-checkmark-outline" size={20} color="#6b7280" />
+              <Text className="text-gray-900 dark:text-white ml-3">{t('profile.privacy_security')}</Text>
+            </View>
+            <Ionicons 
+              name={showPrivacySection ? "chevron-down" : "chevron-forward"} 
+              size={20} 
+              color="#6b7280" 
+            />
+          </TouchableOpacity>
+
+          {/* Privacy & Security Content - Only show when toggled */}
+          {showPrivacySection && (
+            <View className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+              <View className="space-y-4">
+                <View className="flex-row items-start">
+                  <Ionicons name="lock-closed" size={20} color="#3b82f6" className="mt-1" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-gray-900 dark:text-white font-medium mb-1">
+                      {t('profile.data_protection')}
+                    </Text>
+                    <Text className="text-gray-700 dark:text-gray-300 text-sm leading-5">
+                      {t('profile.data_protection_info')}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View className="flex-row items-start">
+                  <Ionicons name="medical" size={20} color="#10b981" className="mt-1" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-gray-900 dark:text-white font-medium mb-1">
+                      {t('profile.medical_privacy')}
+                    </Text>
+                    <Text className="text-gray-700 dark:text-gray-300 text-sm leading-5">
+                      {t('profile.medical_privacy_info')}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View className="flex-row items-start">
+                  <Ionicons name="card" size={20} color="#8b5cf6" className="mt-1" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-gray-900 dark:text-white font-medium mb-1">
+                      {t('profile.secure_payments')}
+                    </Text>
+                    <Text className="text-gray-700 dark:text-gray-300 text-sm leading-5">
+                      {t('profile.secure_payments_info')}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View className="flex-row items-start">
+                  <Ionicons name="person-circle" size={20} color="#f59e0b" className="mt-1" />
+                  <View className="ml-3 flex-1">
+                    <Text className="text-gray-900 dark:text-white font-medium mb-1">
+                      {t('profile.account_security')}
+                    </Text>
+                    <Text className="text-gray-700 dark:text-gray-300 text-sm leading-5">
+                      {t('profile.account_security_info')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
         {/* About Section */}
         <View className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
           <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            About & Information
+            {t('profile.about')}
           </Text>
 
           <TouchableOpacity
@@ -332,7 +498,7 @@ export default function PatientProfile() {
           >
             <View className="flex-row items-center">
               <Ionicons name="information-circle-outline" size={20} color="#6b7280" />
-              <Text className="text-gray-900 dark:text-white ml-3">About SwasthyaSetu</Text>
+              <Text className="text-gray-900 dark:text-white ml-3">{t('profile.about_swasthyasetu')}</Text>
             </View>
             <Ionicons 
               name={showAboutSection ? "chevron-down" : "chevron-forward"} 
@@ -345,32 +511,32 @@ export default function PatientProfile() {
           {showAboutSection && (
             <View className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Text className="text-gray-700 dark:text-gray-300 leading-6 mb-4">
-                SwasthyaSetu brings healthcare to your fingertips. Connect with verified doctors, book appointments, and get quality medical care from the comfort of your home. Your health, our priority.
+                {t('profile.about_description')}
               </Text>
               
               <View className="space-y-3">
                 <View className="flex-row items-center">
                   <Ionicons name="medical" size={20} color="#10b981" />
                   <Text className="text-gray-700 dark:text-gray-300 ml-3">
-                    Consult with verified doctors
+                    {t('profile.verified_doctors')}
                   </Text>
                 </View>
                 <View className="flex-row items-center">
                   <Ionicons name="time" size={20} color="#10b981" />
                   <Text className="text-gray-700 dark:text-gray-300 ml-3">
-                    Book appointments anytime
+                    {t('profile.book_anytime')}
                   </Text>
                 </View>
                 <View className="flex-row items-center">
                   <Ionicons name="shield-checkmark" size={20} color="#10b981" />
                   <Text className="text-gray-700 dark:text-gray-300 ml-3">
-                    Secure health records
+                    {t('profile.secure_records')}
                   </Text>
                 </View>
                 <View className="flex-row items-center">
                   <Ionicons name="chatbubbles" size={20} color="#10b981" />
                   <Text className="text-gray-700 dark:text-gray-300 ml-3">
-                    AI health assistant support
+                    {t('profile.ai_support')}
                   </Text>
                 </View>
               </View>
@@ -381,7 +547,7 @@ export default function PatientProfile() {
         {/* Contact Us Section */}
         <View className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
           <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Support & Contact
+            {t('profile.contact_support')}
           </Text>
 
           <TouchableOpacity
@@ -390,7 +556,7 @@ export default function PatientProfile() {
           >
             <View className="flex-row items-center">
               <Ionicons name="headset-outline" size={20} color="#6b7280" />
-              <Text className="text-gray-900 dark:text-white ml-3">Contact Support</Text>
+              <Text className="text-gray-900 dark:text-white ml-3">{t('profile.contact_support')}</Text>
             </View>
             <Ionicons 
               name={showContactSection ? "chevron-down" : "chevron-forward"} 
@@ -411,7 +577,7 @@ export default function PatientProfile() {
               >
                 <Ionicons name="mail" size={20} color="#3b82f6" />
                 <View className="ml-3">
-                  <Text className="text-gray-900 dark:text-white font-medium">Patient Support</Text>
+                  <Text className="text-gray-900 dark:text-white font-medium">{t('profile.patient_support')}</Text>
                   <Text className="text-gray-600 dark:text-gray-400 text-sm">patients@swasthyasetu.com</Text>
                 </View>
               </TouchableOpacity>
@@ -425,7 +591,7 @@ export default function PatientProfile() {
               >
                 <Ionicons name="call" size={20} color="#10b981" />
                 <View className="ml-3">
-                  <Text className="text-gray-900 dark:text-white font-medium">Patient Helpline</Text>
+                  <Text className="text-gray-900 dark:text-white font-medium">{t('profile.patient_helpline')}</Text>
                   <Text className="text-gray-600 dark:text-gray-400 text-sm">+91-1800-PATIENT</Text>
                 </View>
               </TouchableOpacity>
@@ -436,8 +602,8 @@ export default function PatientProfile() {
               >
                 <Ionicons name="warning" size={20} color="#ef4444" />
                 <View className="ml-3">
-                  <Text className="text-gray-900 dark:text-white font-medium">Emergency</Text>
-                  <Text className="text-gray-600 dark:text-gray-400 text-sm">Call 108 for emergencies</Text>
+                  <Text className="text-gray-900 dark:text-white font-medium">{t('profile.emergency')}</Text>
+                  <Text className="text-gray-600 dark:text-gray-400 text-sm">{t('profile.emergency_info')}</Text>
                 </View>
               </TouchableOpacity>
               
@@ -450,8 +616,8 @@ export default function PatientProfile() {
               >
                 <Ionicons name="help-circle" size={20} color="#8b5cf6" />
                 <View className="ml-3">
-                  <Text className="text-gray-900 dark:text-white font-medium">Help Center</Text>
-                  <Text className="text-gray-600 dark:text-gray-400 text-sm">FAQs & guides</Text>
+                  <Text className="text-gray-900 dark:text-white font-medium">{t('profile.help_center')}</Text>
+                  <Text className="text-gray-600 dark:text-gray-400 text-sm">{t('profile.help_center_info')}</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -460,7 +626,7 @@ export default function PatientProfile() {
 
         {/* Logout */}
         <Button
-          title="Logout"
+          title={t('profile.logout')}
           onPress={handleLogout}
           variant="outline"
           className="mb-8"

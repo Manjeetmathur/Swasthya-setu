@@ -5,6 +5,7 @@ import EmergencyAlert from '@/components/EmergencyAlert'
 import EmergencyServicesSection from '@/components/EmergencyServicesSection'
 import { EmergencyAlert as EmergencyAlertType } from '@/stores/emergencyStore'
 import { Hospital } from '@/types'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface ServicesSectionProps {
   activeAlert: EmergencyAlertType | null
@@ -24,6 +25,7 @@ export default function ServicesSection({
   onHospitalPress
 }: ServicesSectionProps) {
   const router = useRouter()
+  const { t } = useLanguageStore()
 
   return (
     <View>
@@ -43,7 +45,7 @@ export default function ServicesSection({
       {/* Medical AI Assistant Cards */}
       <View className="mb-6">
         <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          AI Health Assistant
+          {t('home.ai_health_assistant')}
         </Text>
 
         <View className="flex-row gap-3">
@@ -53,10 +55,10 @@ export default function ServicesSection({
           >
             <Ionicons name="medical" size={24} color="#8b5cf6" />
             <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
-              Medicine Info
+              {t('home.medicine_info')}
             </Text>
             <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-              Uses & side effects
+              {t('home.medicine_info_short')}
             </Text>
           </TouchableOpacity>
           
@@ -66,10 +68,10 @@ export default function ServicesSection({
           >
             <Ionicons name="medical" size={24} color="#3b82f6" />
             <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
-              Symptoms Check
+              {t('home.symptoms_check')}
             </Text>
             <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-              Health guidance
+              {t('home.health_guidance')}
             </Text>
           </TouchableOpacity>
           
@@ -79,10 +81,10 @@ export default function ServicesSection({
           >
             <Ionicons name="heart" size={24} color="#10b981" />
             <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
-              Health Tips
+              {t('home.health_tips')}
             </Text>
             <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-              Wellness advice
+              {t('home.wellness_advice')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -92,27 +94,27 @@ export default function ServicesSection({
       <View className="mb-6">
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-xl font-bold text-gray-900 dark:text-white">
-            E-Hospital
+            {t('home.e_hospital')}
           </Text>
           {hospitals.length > 0 && (
             <TouchableOpacity
               onPress={() => router.push('/patient/hospitals')}
-              className="bg-purple-600 dark:bg-purple-700 px-4 py-2 rounded-lg"
+              className="0 dark:bg-purple-700 px-4 py-2 rounded-lg"
             >
-              <Text className="text-white text-sm font-semibold">
-                E-Hospitals
+              <Text className="text-black text-sm font-semibold">
+                {t('home.view_all')}
               </Text>
             </TouchableOpacity>
           )}
         </View>
         
         {loadingHospitals ? (
-          <Text className="text-gray-500 text-center py-8">Loading hospitals...</Text>
+          <Text className="text-gray-500 text-center py-8">{t('home.loading_hospitals')}</Text>
         ) : hospitals.length === 0 ? (
           <View className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 items-center">
             <Ionicons name="business-outline" size={48} color="#9ca3af" />
             <Text className="text-gray-500 dark:text-gray-400 mt-4 text-center">
-              No verified hospitals available
+              {t('home.no_hospitals')}
             </Text>
           </View>
         ) : (
@@ -137,7 +139,7 @@ export default function ServicesSection({
                   </View>
                   <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">
                     <Text className="text-xs font-semibold text-green-700 dark:text-green-300">
-                      VERIFIED
+                      {t('home.verified')}
                     </Text>
                   </View>
                 </View>
@@ -162,7 +164,7 @@ export default function ServicesSection({
                       {hospital.hospitalData.specialties.length > 2 && (
                         <View className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                           <Text className="text-xs text-gray-600 dark:text-gray-400">
-                            +{hospital.hospitalData.specialties.length - 2} more
+                            +{hospital.hospitalData.specialties.length - 2} {t('home.more')}
                           </Text>
                         </View>
                       )}

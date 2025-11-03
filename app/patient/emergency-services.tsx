@@ -12,11 +12,13 @@ import { useRoute, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { HospitalResponse } from '@/stores/emergencyStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import Button from '@/components/Button'
 
 export default function EmergencyServices() {
   const router = useRouter()
   const route = useRoute()
+  const { t } = useLanguageStore()
   const params = route.params as { hospitals: string } | undefined
 
   const [hospitals, setHospitals] = useState<HospitalResponse[]>([])
@@ -45,24 +47,24 @@ export default function EmergencyServices() {
 
   const handleRequestAmbulance = (hospital: HospitalResponse) => {
     Alert.alert(
-      'Request Ambulance',
-      `Request ambulance from ${hospital.hospitalName}?`,
+      t('emergency.request_ambulance'),
+      `${t('emergency.request_ambulance_confirm')} ${hospital.hospitalName}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('emergency.cancel'), style: 'cancel' },
         {
-          text: 'Request',
+          text: t('emergency.request'),
           onPress: async () => {
             setLoading(true)
             try {
               // Simulate ambulance request
               await new Promise(resolve => setTimeout(resolve, 1500))
               Alert.alert(
-                'Ambulance Requested',
-                `Ambulance from ${hospital.hospitalName} will arrive in approximately ${hospital.responseTime}`,
+                t('emergency.ambulance_requested'),
+                `${t('emergency.ambulance')} ${hospital.hospitalName} ${t('emergency.ambulance_will_arrive')} ${hospital.responseTime}`,
                 [{ text: 'OK' }]
               )
             } catch (error) {
-              Alert.alert('Error', 'Failed to request ambulance')
+              Alert.alert(t('emergency.error'), t('emergency.failed_request_ambulance'))
             } finally {
               setLoading(false)
             }
@@ -81,7 +83,7 @@ export default function EmergencyServices() {
             <Ionicons name="arrow-back" size={24} color="#2563eb" />
           </TouchableOpacity>
           <Text className="text-2xl font-bold text-gray-900 dark:text-white flex-1">
-            Emergency Services
+            {t('emergency.title')}
           </Text>
         </View>
 
@@ -91,11 +93,11 @@ export default function EmergencyServices() {
             <View className="flex-row items-center mb-2">
               <Ionicons name="checkmark-circle" size={20} color="#2563eb" />
               <Text className="text-blue-900 dark:text-blue-200 font-bold ml-2">
-                Emergency Services Available
+                {t('emergency.services_available')}
               </Text>
             </View>
             <Text className="text-blue-800 dark:text-blue-300 text-sm">
-              {hospitals.length} hospital{hospitals.length !== 1 ? 's' : ''} found within 20 km
+              {hospitals.length} {hospitals.length !== 1 ? t('emergency.hospitals_found_plural') : t('emergency.hospitals_found')} {t('emergency.found_within')}
             </Text>
           </View>
 
@@ -104,7 +106,7 @@ export default function EmergencyServices() {
             <View className="flex-row items-start">
               <Ionicons name="alert" size={16} color="#dc2626" className="mt-1 mr-2" />
               <Text className="text-red-900 dark:text-red-200 text-xs flex-1">
-                For life-threatening emergencies, always call 112 first. These are nearby hospitals that can provide emergency care.
+                {t('emergency.emergency_info')}
               </Text>
             </View>
           </View>
@@ -114,13 +116,13 @@ export default function EmergencyServices() {
             <View className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 items-center">
               <Ionicons name="medical" size={48} color="#9ca3af" />
               <Text className="text-gray-900 dark:text-white font-semibold mt-4">
-                No Hospitals Found
+                {t('emergency.no_hospitals_found')}
               </Text>
               <Text className="text-gray-600 dark:text-gray-400 text-center mt-2 text-sm">
-                No emergency services available in your area. Please call 112 immediately.
+                {t('emergency.no_services_available')}
               </Text>
               <Button
-                title="Call Emergency (112)"
+                title={t('emergency.call_emergency')}
                 onPress={() => Linking.openURL('tel:112')}
                 className="mt-6"
               />
@@ -161,7 +163,7 @@ export default function EmergencyServices() {
                                 : 'text-red-700 dark:text-red-300'
                             }`}
                           >
-                            {hospital.canRespond ? 'Can Respond' : 'Limited Capacity'}
+                            {hospital.canRespond ? t('emergency.can_respond') : t('emergency.limited_capacity')}
                           </Text>
                         </View>
                       </View>
@@ -177,7 +179,7 @@ export default function EmergencyServices() {
                       <View className="flex-row justify-between mb-2">
                         <View className="flex-1">
                           <Text className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                            Response Time
+                            {t('emergency.response_time')}
                           </Text>
                           <View className="flex-row items-center">
                             <Ionicons name="car" size={14} color="#2563eb" />
@@ -189,7 +191,7 @@ export default function EmergencyServices() {
 
                         <View className="flex-1 items-center">
                           <Text className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                            Available Beds
+                            {t('emergency.available_beds')}
                           </Text>
                           <View className="flex-row items-center justify-center">
                             <Ionicons name="bed" size={14} color="#10b981" />
@@ -201,7 +203,7 @@ export default function EmergencyServices() {
 
                         <View className="flex-1 items-end">
                           <Text className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                            Ambulances
+                            {t('emergency.ambulances')}
                           </Text>
                           <View className="flex-row items-center justify-end">
                             <Ionicons name="medical" size={14} color="#dc2626" />
@@ -216,7 +218,7 @@ export default function EmergencyServices() {
                         <View className="flex-row items-center mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
                           <Ionicons name="heart-circle" size={14} color="#dc2626" />
                           <Text className="text-xs text-gray-700 dark:text-gray-300 ml-2">
-                            ICU Beds: {hospital.icuBeds}
+                            {t('emergency.icu_beds')}: {hospital.icuBeds}
                           </Text>
                         </View>
                       )}
@@ -232,7 +234,7 @@ export default function EmergencyServices() {
                         className="flex-1 bg-blue-600 rounded-lg py-2.5 flex-row items-center justify-center"
                       >
                         <Ionicons name="navigate" size={16} color="white" />
-                        <Text className="text-white font-semibold ml-1 text-sm">Directions</Text>
+                        <Text className="text-white font-semibold ml-1 text-sm">{t('emergency.directions')}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -245,7 +247,7 @@ export default function EmergencyServices() {
                         ) : (
                           <>
                             <Ionicons name="medkit" size={16} color="white" />
-                            <Text className="text-white font-semibold ml-1 text-sm">Ambulance</Text>
+                            <Text className="text-white font-semibold ml-1 text-sm">{t('emergency.ambulance')}</Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -259,12 +261,12 @@ export default function EmergencyServices() {
           {/* Emergency Button */}
           <View className="mt-6 mb-4">
             <Button
-              title="Call Emergency (112)"
+              title={t('emergency.call_emergency')}
               onPress={() => Linking.openURL('tel:112')}
               className="bg-red-600 active:bg-red-700"
             />
             <Text className="text-center text-gray-600 dark:text-gray-400 text-xs mt-3">
-              Always call emergency services for life-threatening situations
+              {t('emergency.emergency_call_info')}
             </Text>
           </View>
         </View>
@@ -287,7 +289,7 @@ export default function EmergencyServices() {
               <View className="flex-row items-center">
                 <Ionicons name="location" size={16} color="#2563eb" className="mr-2" />
                 <Text className="text-gray-700 dark:text-gray-300 text-sm flex-1">
-                  {selectedHospital.distance.toFixed(1)} km away
+                  {selectedHospital.distance.toFixed(1)} {t('emergency.km_away')}
                 </Text>
               </View>
               <View className="flex-row items-center">
@@ -299,7 +301,7 @@ export default function EmergencyServices() {
               <View className="flex-row items-center">
                 <Ionicons name="bed" size={16} color="#2563eb" className="mr-2" />
                 <Text className="text-gray-700 dark:text-gray-300 text-sm flex-1">
-                  {selectedHospital.availableBeds} beds available
+                  {selectedHospital.availableBeds} {t('emergency.beds_available')}
                 </Text>
               </View>
             </View>
@@ -309,13 +311,13 @@ export default function EmergencyServices() {
                 onPress={() => setSelectedHospital(null)}
                 className="flex-1 bg-gray-300 dark:bg-gray-600 rounded-lg py-2.5"
               >
-                <Text className="text-gray-900 dark:text-white font-semibold text-center">Close</Text>
+                <Text className="text-gray-900 dark:text-white font-semibold text-center">{t('emergency.close')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleRequestAmbulance(selectedHospital)}
                 className="flex-1 bg-red-600 rounded-lg py-2.5"
               >
-                <Text className="text-white font-semibold text-center">Request Ambulance</Text>
+                <Text className="text-white font-semibold text-center">{t('emergency.request_ambulance')}</Text>
               </TouchableOpacity>
             </View>
           </View>
