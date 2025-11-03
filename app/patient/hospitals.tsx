@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert, Linking, TextInput } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, Alert, Linking, TextInput, Platform } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, addDoc, Timestamp, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Ionicons } from '@expo/vector-icons'
 import { useBedManagementStore } from '@/stores/bedManagementStore'
 import { useAuthStore } from '@/stores/authStore'
+import { Calendar } from 'react-native-calendars'
+import DateTimePicker from '@react-native-community/datetimepicker'
 
 interface Hospital {
   id: string
@@ -43,6 +45,14 @@ export default function AllHospitals() {
   const [showBedBooking, setShowBedBooking] = useState(false)
   const [selectedBedType, setSelectedBedType] = useState<'general' | 'icu'>('general')
   const [bookingReason, setBookingReason] = useState('')
+  const [showAppointmentBooking, setShowAppointmentBooking] = useState(false)
+  const [appointmentDate, setAppointmentDate] = useState('')
+  const [appointmentTime, setAppointmentTime] = useState('')
+  const [appointmentReason, setAppointmentReason] = useState('')
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
+  const [bookedSlots, setBookedSlots] = useState<string[]>([])
+  const [loadingAppointment, setLoadingAppointment] = useState(false)
 
   useEffect(() => {
     fetchApprovedHospitals()
@@ -208,6 +218,90 @@ export default function AllHospitals() {
     } catch (error) {
       console.error('Error booking bed:', error)
       Alert.alert('Error', 'Failed to submit bed booking request')
+    }
+  }
+
+  // Fetch booked time slots for selected date and hospital
+  useEffect(() => {
+    if (appointmentDate && selectedHospital) {
+      const appointmentsRef = collection(db, 'appointments')
+      const selectedDate = new Date(appointmentDate)
+      const startOfDay = new Date(selectedDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(selectedDate)
+      endOfDay.setHours(23, 59, 59, 999)
+
+      const q = query(
+        appointmentsRef,
+        where('hospitalId', '==', selectedHospital.id),
+        where('date', '>=', Timestamp.fromDate(startOfDay)),
+        where('date', '<=', Timestamp.fromDate(endOfDay))
+      )
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const booked = snapshot.docs
+          .map(doc => doc.data().time)
+          .filter(time => time) as string[]
+        setBookedSlots(booked)
+      })
+
+      return () => unsubscribe()
+    } else {
+      setBookedSlots([])
+    }
+  }, [appointmentDate, selectedHospital])
+
+  const timeSlots = [
+    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
+    '15:00', '15:30', '16:00', '16:30', '17:00'
+  ]
+
+  const handleBookAppointment = async () => {
+    if (!selectedHospital || !userData) {
+      Alert.alert('Error', 'Missing hospital or user data')
+      return
+    }
+
+    if (!appointmentDate || !appointmentTime || !appointmentReason.trim()) {
+      Alert.alert('Error', 'Please fill in all fields')
+      return
+    }
+
+    setLoadingAppointment(true)
+    try {
+      const selectedDate = new Date(appointmentDate)
+      selectedDate.setHours(parseInt(appointmentTime.split(':')[0]), parseInt(appointmentTime.split(':')[1]))
+
+      await addDoc(collection(db, 'appointments'), {
+        patientId: userData.uid,
+        hospitalId: selectedHospital.id,
+        patientName: userData.displayName || 'Patient',
+        hospitalName: selectedHospital.hospitalData.hospitalName,
+        date: Timestamp.fromDate(selectedDate),
+        time: appointmentTime,
+        status: 'pending',
+        reason: appointmentReason.trim(),
+        appointmentType: 'hospital',
+        createdAt: Timestamp.now()
+      })
+
+      Alert.alert('Success', 'Appointment booked successfully!', [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            setShowAppointmentBooking(false)
+            setAppointmentDate('')
+            setAppointmentTime('')
+            setAppointmentReason('')
+          }
+        }
+      ])
+    } catch (error: any) {
+      console.error('Error booking appointment:', error)
+      Alert.alert('Error', error.message || 'Failed to book appointment')
+    } finally {
+      setLoadingAppointment(false)
     }
   }
 
@@ -614,24 +708,34 @@ export default function AllHospitals() {
               )}
 
               {/* Action Buttons */}
-              <View className="flex-row gap-3 mt-4 mb-8">
+              <View className="gap-3 mt-4 mb-8">
                 <TouchableOpacity
-                  className="flex-1 bg-blue-600 rounded-lg p-4 items-center"
-                  onPress={() => handleCallHospital(selectedHospital.hospitalData.phoneNumber)}
+                  className="bg-purple-600 rounded-lg p-4 items-center"
+                  onPress={() => setShowAppointmentBooking(true)}
                 >
-                  <Ionicons name="call" size={20} color="#ffffff" />
-                  <Text className="text-white font-semibold mt-1">Call Hospital</Text>
+                  <Ionicons name="calendar" size={20} color="#ffffff" />
+                  <Text className="text-white font-semibold mt-1">Book Appointment</Text>
                 </TouchableOpacity>
                 
-                {selectedHospital.hospitalData.emergencyNumber && (
+                <View className="flex-row gap-3">
                   <TouchableOpacity
-                    className="flex-1 bg-red-600 rounded-lg p-4 items-center"
-                    onPress={() => handleEmergencyCall(selectedHospital.hospitalData.emergencyNumber!)}
+                    className="flex-1 bg-blue-600 rounded-lg p-4 items-center"
+                    onPress={() => handleCallHospital(selectedHospital.hospitalData.phoneNumber)}
                   >
-                    <Ionicons name="medical" size={20} color="#ffffff" />
-                    <Text className="text-white font-semibold mt-1">Emergency</Text>
+                    <Ionicons name="call" size={20} color="#ffffff" />
+                    <Text className="text-white font-semibold mt-1">Call Hospital</Text>
                   </TouchableOpacity>
-                )}
+                  
+                  {selectedHospital.hospitalData.emergencyNumber && (
+                    <TouchableOpacity
+                      className="flex-1 bg-red-600 rounded-lg p-4 items-center"
+                      onPress={() => handleEmergencyCall(selectedHospital.hospitalData.emergencyNumber!)}
+                    >
+                      <Ionicons name="medical" size={20} color="#ffffff" />
+                      <Text className="text-white font-semibold mt-1">Emergency</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </ScrollView>
           )}
@@ -751,6 +855,164 @@ export default function AllHospitals() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Appointment Booking Modal */}
+      <Modal
+        visible={showAppointmentBooking}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAppointmentBooking(false)}
+      >
+        <SafeAreaView className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white dark:bg-gray-800 rounded-t-3xl max-h-[90%]">
+            <View className="flex-row items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                Book Appointment
+              </Text>
+              <TouchableOpacity onPress={() => setShowAppointmentBooking(false)}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView className="p-6">
+              {selectedHospital && (
+                <View className="mb-4">
+                  <Text className="text-gray-600 dark:text-gray-400 text-sm mb-1">Hospital</Text>
+                  <Text className="text-gray-900 dark:text-white font-medium">
+                    {selectedHospital.hospitalData.hospitalName}
+                  </Text>
+                </View>
+              )}
+
+              {/* Date Selection */}
+              <View className="mb-4">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Select Date *</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCalendar(true)}
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-800"
+                >
+                  <Text className={`${appointmentDate ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
+                    {appointmentDate || 'Select date'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {showCalendar && (
+                <View className="mb-4">
+                  <Calendar
+                    onDayPress={(day) => {
+                      setAppointmentDate(day.dateString)
+                      setShowCalendar(false)
+                    }}
+                    markedDates={{
+                      [appointmentDate]: { selected: true, selectedColor: '#8b5cf6' }
+                    }}
+                    minDate={new Date().toISOString().split('T')[0]}
+                    theme={{
+                      backgroundColor: '#ffffff',
+                      calendarBackground: '#ffffff',
+                      textSectionTitleColor: '#6b7280',
+                      selectedDayBackgroundColor: '#8b5cf6',
+                      selectedDayTextColor: '#ffffff',
+                      todayTextColor: '#8b5cf6',
+                      dayTextColor: '#1f2937',
+                      textDisabledColor: '#d1d5db',
+                      arrowColor: '#8b5cf6',
+                    }}
+                  />
+                </View>
+              )}
+
+              {/* Time Selection */}
+              {appointmentDate && (
+                <View className="mb-4">
+                  <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Select Time *</Text>
+                  <View className="flex-row flex-wrap gap-2">
+                    {timeSlots.map((slot) => {
+                      const isBooked = bookedSlots.includes(slot)
+                      const isSelected = appointmentTime === slot
+                      
+                      return (
+                        <TouchableOpacity
+                          key={slot}
+                          onPress={() => !isBooked && setAppointmentTime(slot)}
+                          disabled={isBooked}
+                          className={`px-4 py-2 rounded-lg border ${
+                            isBooked
+                              ? 'border-red-300 bg-red-100 dark:bg-red-900/30'
+                              : isSelected
+                              ? 'border-purple-600 bg-purple-600'
+                              : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
+                          }`}
+                        >
+                          <Text
+                            className={`font-medium ${
+                              isBooked
+                                ? 'text-red-600 dark:text-red-400'
+                                : isSelected
+                                ? 'text-white'
+                                : 'text-gray-900 dark:text-white'
+                            }`}
+                          >
+                            {slot}
+                          </Text>
+                          {isBooked && (
+                            <Text className="text-red-500 text-xs text-center mt-1">
+                              Booked
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      )
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* Reason */}
+              <View className="mb-6">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Reason for Visit *</Text>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-gray-900 dark:text-white min-h-[100px]"
+                  placeholder="Describe the reason for your appointment..."
+                  placeholderTextColor="#9ca3af"
+                  value={appointmentReason}
+                  onChangeText={setAppointmentReason}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View className="flex-row gap-3">
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowAppointmentBooking(false)
+                    setAppointmentDate('')
+                    setAppointmentTime('')
+                    setAppointmentReason('')
+                  }}
+                  className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-4 items-center"
+                >
+                  <Text className="text-gray-700 dark:text-gray-300 font-semibold">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleBookAppointment}
+                  disabled={!appointmentDate || !appointmentTime || !appointmentReason.trim() || loadingAppointment}
+                  className={`flex-1 rounded-lg p-4 items-center ${
+                    !appointmentDate || !appointmentTime || !appointmentReason.trim() || loadingAppointment
+                      ? 'bg-gray-300 dark:bg-gray-600'
+                      : 'bg-purple-600'
+                  }`}
+                >
+                  <Text className="text-white font-semibold">
+                    {loadingAppointment ? 'Booking...' : 'Book Appointment'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   )

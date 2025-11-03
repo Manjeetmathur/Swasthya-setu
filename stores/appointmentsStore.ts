@@ -5,21 +5,24 @@ import { db } from '@/lib/firebase'
 export interface Appointment {
   id: string
   patientId: string
-  doctorId: string
+  doctorId?: string
+  hospitalId?: string
   patientName: string
-  doctorName: string
+  doctorName?: string
+  hospitalName?: string
   date: Timestamp
   time: string
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
   reason: string
   notes?: string
   createdAt: Timestamp
+  appointmentType: 'doctor' | 'hospital'
 }
 
 interface AppointmentsState {
   appointments: Appointment[]
   isLoading: boolean
-  subscribeToAppointments: (userId: string, role: 'patient' | 'doctor') => () => void
+  subscribeToAppointments: (userId: string, role: 'patient' | 'doctor' | 'hospital') => () => void
   setLoading: (isLoading: boolean) => void
 }
 
@@ -27,11 +30,18 @@ export const useAppointmentsStore = create<AppointmentsState>((set, get) => ({
   appointments: [],
   isLoading: false,
   setLoading: (isLoading) => set({ isLoading }),
-  subscribeToAppointments: (userId: string, role: 'patient' | 'doctor') => {
+  subscribeToAppointments: (userId: string, role: 'patient' | 'doctor' | 'hospital') => {
     set({ isLoading: true })
     
     const appointmentsRef = collection(db, 'appointments')
-    const field = role === 'patient' ? 'patientId' : 'doctorId'
+    let field: string
+    if (role === 'patient') {
+      field = 'patientId'
+    } else if (role === 'doctor') {
+      field = 'doctorId'
+    } else {
+      field = 'hospitalId'
+    }
     
     const unsubscribeRef: { current: (() => void) | null } = { current: null }
     let isFallbackActive = false

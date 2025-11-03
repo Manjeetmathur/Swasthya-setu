@@ -111,6 +111,13 @@ export default function HospitalDashboard() {
       onPress: () => router.push('/hospital/bed-management')
     },
     {
+      title: 'Appointments',
+      subtitle: 'View and manage appointments',
+      icon: 'calendar-outline',
+      color: '#3b82f6',
+      onPress: () => router.push('/hospital/appointments')
+    },
+    {
       title: 'Staff Management',
       subtitle: 'Manage hospital staff',
       icon: 'people-outline',

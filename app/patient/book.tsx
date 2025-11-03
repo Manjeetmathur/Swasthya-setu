@@ -310,6 +310,7 @@ export default function BookAppointment() {
         time: time,
         status: 'pending',
         reason: reason,
+        appointmentType: 'doctor',
         createdAt: Timestamp.now()
       })
 

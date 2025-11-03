@@ -80,8 +80,7 @@ export default function BedManagement() {
         return { bg: '#dcfce7', text: '#166534', icon: 'checkmark-circle' }
       case 'occupied':
         return { bg: '#fef3c7', text: '#92400e', icon: 'person' }
-      case 'maintenance':
-        return { bg: '#fee2e2', text: '#991b1b', icon: 'construct' }
+     
       default:
         return { bg: '#f3f4f6', text: '#374151', icon: 'help-circle' }
     }

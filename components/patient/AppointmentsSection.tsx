@@ -50,9 +50,19 @@ export default function AppointmentsSection({
           >
             <View className="flex-row justify-between items-start">
               <View className="flex-1">
-                <Text className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Dr. {appointment.doctorName}
-                </Text>
+                <View className="flex-row items-center mb-1">
+                  {appointment.appointmentType === 'hospital' || appointment.hospitalId ? (
+                    <Ionicons name="business" size={18} color="#8b5cf6" style={{ marginRight: 6 }} />
+                  ) : (
+                    <Ionicons name="medical" size={18} color="#3b82f6" style={{ marginRight: 6 }} />
+                  )}
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-white">
+                    {(appointment.appointmentType === 'hospital' || appointment.hospitalId)
+                      ? appointment.hospitalName || 'Hospital'
+                      : `Dr. ${appointment.doctorName || 'Doctor'}`
+                    }
+                  </Text>
+                </View>
                 <Text className="text-gray-600 dark:text-gray-400 mt-1">
                   {appointment.date.toDate().toLocaleDateString()} at {appointment.time}
                 </Text>
