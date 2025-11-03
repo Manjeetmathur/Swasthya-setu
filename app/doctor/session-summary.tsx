@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
 import { CallData } from '@/stores/callStore'
 import { usePrescriptionStore, Medication } from '@/stores/prescriptionStore'
-import { useHospitalQueueStore } from '@/stores/hospitalQueueStore'
 import { useBedManagementStore } from '@/stores/bedManagementStore'
 import Button from '@/components/Button'
 import { Ionicons } from '@expo/vector-icons'
@@ -17,7 +16,6 @@ export default function SessionSummary() {
   
   const { userData } = useAuthStore()
   const { createPrescription, isLoading: isCreatingPrescription } = usePrescriptionStore()
-  const { addToQueue, isLoading: isAddingToQueue } = useHospitalQueueStore()
   const { 
     checkBedAvailability, 
     bookBed, 
@@ -26,18 +24,13 @@ export default function SessionSummary() {
   } = useBedManagementStore()
 
   const [call, setCall] = useState<CallData | null>(null)
-  const [activeTab, setActiveTab] = useState<'prescription' | 'queue' | 'bed'>('prescription')
+  const [activeTab, setActiveTab] = useState<'prescription' | 'bed'>('prescription')
   
   // Prescription state
   const [medications, setMedications] = useState<Medication[]>([{ name: '', dosage: '', frequency: '', duration: '' }])
   const [diagnosis, setDiagnosis] = useState('')
   const [notes, setNotes] = useState('')
   const [showAddMedication, setShowAddMedication] = useState(false)
-  
-  // Queue state
-  const [department, setDepartment] = useState('general')
-  const [queuePriority, setQueuePriority] = useState<'normal' | 'urgent' | 'emergency'>('normal')
-  const [queueReason, setQueueReason] = useState('')
   
   // Bed state
   const [showBedModal, setShowBedModal] = useState(false)
@@ -130,30 +123,6 @@ export default function SessionSummary() {
     }
   }
 
-  const handleAddToQueue = async () => {
-    if (!call || !userData) return
-
-    try {
-      const queueId = await addToQueue(
-        call.patientId,
-        call.doctorId,
-        call.patientName,
-        call.doctorName,
-        department,
-        queuePriority,
-        queueReason || undefined,
-        call.appointmentId,
-        call.id
-      )
-
-      Alert.alert('Success', `Patient added to ${department} queue. Queue number: ${queueId.slice(0, 8)}`, [
-        { text: 'OK', onPress: () => router.back() }
-      ])
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add patient to queue')
-    }
-  }
-
   const handleBookBed = async () => {
     if (!call || !userData || !selectedBed) {
       Alert.alert('Error', 'Please select a bed')
@@ -243,23 +212,6 @@ export default function SessionSummary() {
               : 'text-gray-600 dark:text-gray-400'
           }`}>
             Prescription
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          onPress={() => setActiveTab('queue')}
-          className={`flex-1 py-4 items-center ${
-            activeTab === 'queue'
-              ? 'border-b-2 border-blue-600'
-              : ''
-          }`}
-        >
-          <Text className={`font-semibold ${
-            activeTab === 'queue'
-              ? 'text-blue-600 dark:text-blue-400'
-              : 'text-gray-600 dark:text-gray-400'
-          }`}>
-            OPD Queue
           </Text>
         </TouchableOpacity>
         
@@ -388,92 +340,6 @@ export default function SessionSummary() {
               title="Create Prescription"
               onPress={handleCreatePrescription}
               loading={isCreatingPrescription}
-            />
-          </View>
-        )}
-
-        {/* Queue Tab */}
-        {activeTab === 'queue' && (
-          <View>
-            <Text className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Add to OPD Queue
-            </Text>
-
-            <View className="mb-4">
-              <Text className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                Department
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {['general', 'cardiology', 'orthopedics', 'pediatrics', 'gynecology'].map((dept) => (
-                  <TouchableOpacity
-                    key={dept}
-                    onPress={() => setDepartment(dept)}
-                    className={`px-4 py-2 rounded-lg ${
-                      department === dept
-                        ? 'bg-blue-600'
-                        : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
-                  >
-                    <Text className={`font-semibold ${
-                      department === dept
-                        ? 'text-white'
-                        : 'text-gray-900 dark:text-white'
-                    }`}>
-                      {dept.charAt(0).toUpperCase() + dept.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View className="mb-4">
-              <Text className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                Priority
-              </Text>
-              <View className="flex-row gap-2">
-                {(['normal', 'urgent', 'emergency'] as const).map((priority) => (
-                  <TouchableOpacity
-                    key={priority}
-                    onPress={() => setQueuePriority(priority)}
-                    className={`flex-1 px-4 py-3 rounded-lg ${
-                      queuePriority === priority
-                        ? priority === 'emergency'
-                          ? 'bg-red-600'
-                          : priority === 'urgent'
-                          ? 'bg-orange-600'
-                          : 'bg-blue-600'
-                        : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
-                  >
-                    <Text className={`text-center font-semibold ${
-                      queuePriority === priority
-                        ? 'text-white'
-                        : 'text-gray-900 dark:text-white'
-                    }`}>
-                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View className="mb-6">
-              <Text className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                Reason for Queue
-              </Text>
-              <TextInput
-                placeholder="Enter reason for adding to queue"
-                value={queueReason}
-                onChangeText={setQueueReason}
-                className="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3 text-gray-900 dark:text-white"
-                multiline
-              />
-            </View>
-
-            <Button
-              title="Add to Queue"
-              onPress={handleAddToQueue}
-              loading={isAddingToQueue}
             />
           </View>
         )}

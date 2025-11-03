@@ -10,52 +10,37 @@ export default function Index() {
   const navigationAttemptedRef = useRef(false)
 
   useEffect(() => {
-    // Ensure we only attempt navigation once
-    if (navigationAttemptedRef.current) return
-
-    // Check if root navigation is ready
-    if (!rootNavigationState?.key) {
-      return
-    }
-
-    // Check if auth is still loading
-    if (isLoading) {
-      return
-    }
-
-    // Mark navigation as attempted to prevent duplicate calls
-    navigationAttemptedRef.current = true
-
-    // Perform navigation based on auth state with a small delay to ensure Stack is mounted
-    const timer = requestAnimationFrame(() => {
-      try {
-        if (isAuthenticated && userData) {
-          // Redirect based on role
-          if (userData.role === 'patient') {
-            router.replace('/patient/home')
-          } else if (userData.role === 'doctor') {
-            // Check if doctor is verified before redirecting
-            if (userData.doctorData && userData.doctorData.isVerified) {
-              router.replace('/doctor/schedule')
-            } else {
-              router.replace('/login')
-            }
-          } else if (userData.role === 'admin') {
-            router.replace('/admin')
+    if (!isLoading) {
+      if (isAuthenticated && userData) {
+        // Redirect based on role
+        if (userData.role === 'patient') {
+          router.replace('/patient/home')
+        } else if (userData.role === 'doctor') {
+          // Check if doctor is verified before redirecting
+          if (userData.doctorData && userData.doctorData.isVerified) {
+            router.replace('/doctor/schedule')
           } else {
+            // If doctor is not verified, redirect to login
+            router.replace('/login')
+          }
+        } else if (userData.role === 'admin') {
+          router.replace('/admin')
+        } else if (userData.role === 'hospital') {
+          // Check if hospital is verified before redirecting
+          if (userData.hospitalData && userData.hospitalData.isVerified) {
+            router.replace('/hospital')
+          } else {
+            // If hospital is not verified, redirect to login
             router.replace('/login')
           }
         } else {
-          router.replace('/role-selection')
+          router.replace('/login')
         }
-      } catch (error) {
-        console.error('Navigation error:', error)
-        navigationAttemptedRef.current = false
+      } else {
+        router.replace('/role-selection')
       }
-    })
-
-    return () => cancelAnimationFrame(timer)
-  }, [isLoading, rootNavigationState?.key])
+    }
+  }, [isLoading, isAuthenticated, userData, router])
 
   return (
     <View className="flex-1 items-center justify-center bg-white dark:bg-gray-900">

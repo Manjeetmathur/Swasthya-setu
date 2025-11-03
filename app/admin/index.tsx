@@ -26,6 +26,24 @@ interface User {
     consultationFee?: number
     isVerified: boolean
   }
+  hospitalData?: {
+    hospitalName: string
+    hospitalLicense: string
+    hospitalType: string
+    address: string
+    city: string
+    state: string
+    pincode: string
+    phoneNumber: string
+    emergencyNumber?: string
+    totalBeds: number
+    icuBeds?: number
+    specialties: string[]
+    facilities: string[]
+    accreditation?: string
+    establishedYear?: number
+    isVerified: boolean
+  }
 }
 
 interface AppointmentStats {
@@ -47,7 +65,7 @@ export default function AdminDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [selectedTab, setSelectedTab] = useState<'all' | 'doctors' | 'patients'>('all')
+  const [selectedTab, setSelectedTab] = useState<'all' | 'doctors' | 'patients' | 'hospitals'>('all')
 
   useEffect(() => {
     loadData()
@@ -157,6 +175,63 @@ export default function AdminDashboard() {
     )
   }
 
+  const verifyHospital = async (userId: string, hospitalName: string) => {
+    Alert.alert(
+      'Verify Hospital',
+      `Are you sure you want to verify ${hospitalName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Verify',
+          onPress: async () => {
+            try {
+              await updateDoc(doc(db, 'users', userId), {
+                'hospitalData.isVerified': true
+              })
+              
+              // Refresh data
+              await loadData()
+              
+              Alert.alert('Success', `${hospitalName} has been verified successfully!`)
+            } catch (error) {
+              console.error('Error verifying hospital:', error)
+              Alert.alert('Error', 'Failed to verify hospital')
+            }
+          }
+        }
+      ]
+    )
+  }
+
+  const unverifyHospital = async (userId: string, hospitalName: string) => {
+    Alert.alert(
+      'Unverify Hospital',
+      `Are you sure you want to unverify ${hospitalName}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unverify',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await updateDoc(doc(db, 'users', userId), {
+                'hospitalData.isVerified': false
+              })
+              
+              // Refresh data
+              await loadData()
+              
+              Alert.alert('Success', `${hospitalName} has been unverified.`)
+            } catch (error) {
+              console.error('Error unverifying hospital:', error)
+              Alert.alert('Error', 'Failed to unverify hospital')
+            }
+          }
+        }
+      ]
+    )
+  }
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin':
@@ -165,6 +240,8 @@ export default function AdminDashboard() {
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
       case 'patient':
         return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+      case 'hospital':
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
       default:
         return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
     }
@@ -176,6 +253,8 @@ export default function AdminDashboard() {
         return users.filter(user => user.role === 'doctor')
       case 'patients':
         return users.filter(user => user.role === 'patient')
+      case 'hospitals':
+        return users.filter(user => user.role === 'hospital')
       default:
         return users
     }
@@ -183,7 +262,9 @@ export default function AdminDashboard() {
 
   const doctorCount = users.filter(user => user.role === 'doctor').length
   const patientCount = users.filter(user => user.role === 'patient').length
+  const hospitalCount = users.filter(user => user.role === 'hospital').length
   const unverifiedDoctors = users.filter(user => user.role === 'doctor' && !user.doctorData?.isVerified).length
+  const unverifiedHospitals = users.filter(user => user.role === 'hospital' && !user.hospitalData?.isVerified).length
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
@@ -191,9 +272,14 @@ export default function AdminDashboard() {
         <Text className="text-2xl font-bold text-gray-900 dark:text-white">
           Admin Dashboard
         </Text>
-        <TouchableOpacity onPress={() => router.push('/admin/profile')}>
-          <Ionicons name="person-outline" size={24} color="#6b7280" />
-        </TouchableOpacity>
+        <View className="flex-row items-center gap-4">
+          <TouchableOpacity onPress={() => router.push('/admin/hospital-verification')}>
+            <Ionicons name="business-outline" size={24} color="#6b7280" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/admin/profile')}>
+            <Ionicons name="person-outline" size={24} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -205,7 +291,7 @@ export default function AdminDashboard() {
         <View className="px-6 py-4">
           <View className="mb-6">
             {/* First Row */}
-            <View className="flex-row mb-4" style={{ gap: 16 }}>
+            <View className="flex-row mb-4" style={{ gap: 10 }}>
               <View className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 flex-1">
                 <Text className="text-sm text-blue-900 dark:text-blue-100 mb-1">
                   Total Doctors
@@ -225,7 +311,27 @@ export default function AdminDashboard() {
             </View>
             
             {/* Second Row */}
-            <View className="flex-row" style={{ gap: 16 }}>
+            <View className="flex-row mb-4" style={{ gap: 10 }}>
+              <View className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 flex-1">
+                <Text className="text-sm text-purple-900 dark:text-purple-100 mb-1">
+                  Total Hospitals
+                </Text>
+                <Text className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {hospitalCount}
+                </Text>
+              </View>
+              <View className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 flex-1">
+                <Text className="text-sm text-indigo-900 dark:text-indigo-100 mb-1">
+                  Total Appointments
+                </Text>
+                <Text className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                  {stats.total}
+                </Text>
+              </View>
+            </View>
+
+            {/* Third Row */}
+            <View className="flex-row" style={{ gap: 10 }}>
               <View className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 flex-1">
                 <Text className="text-sm text-orange-900 dark:text-orange-100 mb-1">
                   Unverified Doctors
@@ -234,44 +340,50 @@ export default function AdminDashboard() {
                   {unverifiedDoctors}
                 </Text>
               </View>
-              <View className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 flex-1">
-                <Text className="text-sm text-purple-900 dark:text-purple-100 mb-1">
-                  Total Appointments
+              <TouchableOpacity 
+                onPress={() => router.push('/admin/hospital-verification')}
+                className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 flex-1"
+              >
+                <Text className="text-sm text-red-900 dark:text-red-100 mb-1">
+                  Unverified Hospitals
                 </Text>
-                <Text className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {stats.total}
+                <Text className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {unverifiedHospitals}
                 </Text>
-              </View>
+                <Text className="text-xs text-red-600 dark:text-red-400 mt-1">
+                  Tap to manage
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* Tabs */}
-          <View className="flex-row mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <View className="flex-row mb-3 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
             <TouchableOpacity
               onPress={() => setSelectedTab('all')}
-              className={`flex-1 py-2 px-4 rounded-md ${
+              className={`flex-1 py-1.5 px-2 rounded-md ${
                 selectedTab === 'all' 
                   ? 'bg-white dark:bg-gray-700' 
                   : 'bg-transparent'
               }`}
             >
-              <Text className={`text-center font-medium ${
+              <Text className={`text-center text-xs font-medium ${
                 selectedTab === 'all'
                   ? 'text-gray-900 dark:text-white'
                   : 'text-gray-600 dark:text-gray-400'
               }`}>
-                All Users ({users.length})
+                All ({users.length})
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setSelectedTab('doctors')}
-              className={`flex-1 py-2 px-4 rounded-md ${
+              className={`flex-1 py-1.5 px-2 rounded-md ${
                 selectedTab === 'doctors' 
                   ? 'bg-white dark:bg-gray-700' 
                   : 'bg-transparent'
               }`}
             >
-              <Text className={`text-center font-medium ${
+              <Text className={`text-center text-xs font-medium ${
                 selectedTab === 'doctors'
                   ? 'text-gray-900 dark:text-white'
                   : 'text-gray-600 dark:text-gray-400'
@@ -281,18 +393,34 @@ export default function AdminDashboard() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setSelectedTab('patients')}
-              className={`flex-1 py-2 px-4 rounded-md ${
+              className={`flex-1 py-1.5 px-2 rounded-md ${
                 selectedTab === 'patients' 
                   ? 'bg-white dark:bg-gray-700' 
                   : 'bg-transparent'
               }`}
             >
-              <Text className={`text-center font-medium ${
+              <Text className={`text-center text-xs font-medium ${
                 selectedTab === 'patients'
                   ? 'text-gray-900 dark:text-white'
                   : 'text-gray-600 dark:text-gray-400'
               }`}>
                 Patients ({patientCount})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSelectedTab('hospitals')}
+              className={`flex-1 py-1.5 px-2 rounded-md ${
+                selectedTab === 'hospitals' 
+                  ? 'bg-white dark:bg-gray-700' 
+                  : 'bg-transparent'
+              }`}
+            >
+              <Text className={`text-center text-xs font-medium ${
+                selectedTab === 'hospitals'
+                  ? 'text-gray-900 dark:text-white'
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}>
+                Hospitals ({hospitalCount})
               </Text>
             </TouchableOpacity>
           </View>
@@ -337,6 +465,21 @@ export default function AdminDashboard() {
                         </Text>
                       </View>
                     )}
+                    {user.role === 'hospital' && user.hospitalData && (
+                      <View className={`px-2 py-1 rounded-full ${
+                        user.hospitalData.isVerified 
+                          ? 'bg-green-100 dark:bg-green-900/30' 
+                          : 'bg-red-100 dark:bg-red-900/30'
+                      }`}>
+                        <Text className={`text-xs font-semibold ${
+                          user.hospitalData.isVerified 
+                            ? 'text-green-700 dark:text-green-300' 
+                            : 'text-red-700 dark:text-red-300'
+                        }`}>
+                          {user.hospitalData.isVerified ? 'VERIFIED' : 'UNVERIFIED'}
+                        </Text>
+                      </View>
+                    )}
                     <View className={`px-3 py-1 rounded-full ${getRoleColor(user.role)}`}>
                       <Text className="text-xs font-semibold uppercase">
                         {user.role}
@@ -377,6 +520,84 @@ export default function AdminDashboard() {
                         <Button
                           title="Verify Doctor"
                           onPress={() => verifyDoctor(user.id, user.displayName || 'Doctor')}
+                          size="sm"
+                          className="flex-1"
+                        />
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Hospital-specific information */}
+                {user.role === 'hospital' && user.hospitalData && (
+                  <View className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                    <View className="mb-3">
+                      <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <Text className="font-medium">Hospital Name:</Text> {user.hospitalData.hospitalName}
+                      </Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <Text className="font-medium">Type:</Text> {user.hospitalData.hospitalType}
+                      </Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <Text className="font-medium">License:</Text> {user.hospitalData.hospitalLicense}
+                      </Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <Text className="font-medium">Address:</Text> {user.hospitalData.address}, {user.hospitalData.city}, {user.hospitalData.state} - {user.hospitalData.pincode}
+                      </Text>
+                      <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        <Text className="font-medium">Phone:</Text> {user.hospitalData.phoneNumber}
+                      </Text>
+                      {user.hospitalData.emergencyNumber && (
+                        <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <Text className="font-medium">Emergency:</Text> {user.hospitalData.emergencyNumber}
+                        </Text>
+                      )}
+                      <View className="flex-row flex-wrap gap-2 mb-2">
+                        <Text className="text-sm text-gray-600 dark:text-gray-400">
+                          <Text className="font-medium">Total Beds:</Text> {user.hospitalData.totalBeds}
+                        </Text>
+                        {user.hospitalData.icuBeds && (
+                          <Text className="text-sm text-gray-600 dark:text-gray-400">
+                            <Text className="font-medium">ICU Beds:</Text> {user.hospitalData.icuBeds}
+                          </Text>
+                        )}
+                      </View>
+                      {user.hospitalData.specialties.length > 0 && (
+                        <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <Text className="font-medium">Specialties:</Text> {user.hospitalData.specialties.join(', ')}
+                        </Text>
+                      )}
+                      {user.hospitalData.facilities.length > 0 && (
+                        <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <Text className="font-medium">Facilities:</Text> {user.hospitalData.facilities.join(', ')}
+                        </Text>
+                      )}
+                      {user.hospitalData.accreditation && (
+                        <Text className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          <Text className="font-medium">Accreditation:</Text> {user.hospitalData.accreditation}
+                        </Text>
+                      )}
+                      {user.hospitalData.establishedYear && (
+                        <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                          <Text className="font-medium">Established:</Text> {user.hospitalData.establishedYear}
+                        </Text>
+                      )}
+                    </View>
+                    
+                    {/* Verification buttons */}
+                    <View className="flex-row gap-2">
+                      {user.hospitalData.isVerified ? (
+                        <Button
+                          title="Unverify"
+                          onPress={() => unverifyHospital(user.id, user.hospitalData?.hospitalName || 'Hospital')}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        />
+                      ) : (
+                        <Button
+                          title="Verify Hospital"
+                          onPress={() => verifyHospital(user.id, user.hospitalData?.hospitalName || 'Hospital')}
                           size="sm"
                           className="flex-1"
                         />

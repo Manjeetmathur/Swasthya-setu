@@ -6,14 +6,12 @@ export interface Bed {
   id: string
   bedNumber: string
   ward: string
-  department: string
-  status: 'available' | 'occupied' | 'maintenance' | 'reserved'
-  patientId?: string
-  patientName?: string
-  admittedAt?: Timestamp
-  dischargeAt?: Timestamp
-  reservedUntil?: Timestamp
-  notes?: string
+  type: 'general' | 'icu'
+  status: 'available' | 'occupied' | 'maintenance'
+  patientId?: string | null
+  patientName?: string | null
+  admissionDate?: Timestamp | null
+  hospitalId?: string
 }
 
 export interface BedBooking {
@@ -41,7 +39,7 @@ interface BedManagementStore {
   availableBeds: Bed[]
   isLoading: boolean
 
-  subscribeToBeds: (department?: string) => () => void
+  subscribeToBeds: (department?: string, hospitalId?: string) => () => void
 
   checkBedAvailability: (department?: string, urgency?: 'normal' | 'urgent' | 'emergency') => Bed[]
 
@@ -60,6 +58,12 @@ interface BedManagementStore {
   ) => Promise<string>
 
   subscribeToBookings: (userId: string, role: 'patient' | 'doctor') => () => void
+
+  // Hospital-specific functions
+  addBed: (bed: Omit<Bed, 'id'>) => Promise<void>
+  updateBedStatus: (bedId: string, status: Bed['status'], patientData?: { patientId?: string; patientName?: string; admissionDate?: Timestamp }) => Promise<void>
+  getBedStats: () => { total: number; available: number; occupied: number; maintenance: number }
+  getBedsByWard: (ward: string) => Bed[]
 }
 
 export const useBedManagementStore = create<BedManagementStore>((set, get) => ({
@@ -68,13 +72,24 @@ export const useBedManagementStore = create<BedManagementStore>((set, get) => ({
   availableBeds: [],
   isLoading: false,
 
-  subscribeToBeds: (department?: string) => {
+  subscribeToBeds: (department?: string, hospitalId?: string) => {
     set({ isLoading: true })
     
     const bedsRef = collection(db, 'beds')
     let q
     
-    if (department) {
+    if (hospitalId && department) {
+      q = query(
+        bedsRef,
+        where('hospitalId', '==', hospitalId),
+        where('department', '==', department)
+      )
+    } else if (hospitalId) {
+      q = query(
+        bedsRef,
+        where('hospitalId', '==', hospitalId)
+      )
+    } else if (department) {
       q = query(
         bedsRef,
         where('department', '==', department)
@@ -207,6 +222,58 @@ export const useBedManagementStore = create<BedManagementStore>((set, get) => ({
     )
 
     return unsubscribe
+  },
+
+  // Hospital-specific functions
+  addBed: async (bedData: Omit<Bed, 'id'>) => {
+    try {
+      set({ isLoading: true })
+      await addDoc(collection(db, 'beds'), bedData)
+      set({ isLoading: false })
+    } catch (error) {
+      console.error('Error adding bed:', error)
+      set({ isLoading: false })
+      throw error
+    }
+  },
+
+  updateBedStatus: async (bedId: string, status: Bed['status'], patientData?: { patientId?: string; patientName?: string; admissionDate?: Timestamp }) => {
+    try {
+      set({ isLoading: true })
+      const updateData: Partial<Bed> = { status }
+      
+      if (patientData) {
+        updateData.patientId = patientData.patientId || null
+        updateData.patientName = patientData.patientName || null
+        updateData.admissionDate = patientData.admissionDate || null
+      } else {
+        updateData.patientId = null
+        updateData.patientName = null
+        updateData.admissionDate = null
+      }
+
+      await updateDoc(doc(db, 'beds', bedId), updateData)
+      set({ isLoading: false })
+    } catch (error) {
+      console.error('Error updating bed status:', error)
+      set({ isLoading: false })
+      throw error
+    }
+  },
+
+  getBedStats: () => {
+    const { beds } = get()
+    return {
+      total: beds.length,
+      available: beds.filter(bed => bed.status === 'available').length,
+      occupied: beds.filter(bed => bed.status === 'occupied').length,
+      maintenance: beds.filter(bed => bed.status === 'maintenance').length
+    }
+  },
+
+  getBedsByWard: (ward: string) => {
+    const { beds } = get()
+    return beds.filter(bed => bed.ward === ward)
   }
 }))
 

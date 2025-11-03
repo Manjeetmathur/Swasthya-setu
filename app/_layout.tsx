@@ -23,22 +23,46 @@ export default function RootLayout() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        setUser(user)
         // Fetch user data from Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid))
           if (userDoc.exists()) {
             const userData = userDoc.data()
+            const role = (userData.role as UserRole) || 'patient'
+            const doctorData = userData.doctorData || null
+            const hospitalData = userData.hospitalData || null
+
+            // Check verification status for doctors and hospitals
+            if (role === 'doctor' && doctorData && !doctorData.isVerified) {
+              // Don't set user data for unverified doctors
+              setUser(null)
+              setUserData(null)
+              setLoading(false)
+              return
+            }
+
+            if (role === 'hospital' && hospitalData && !hospitalData.isVerified) {
+              // Don't set user data for unverified hospitals
+              setUser(null)
+              setUserData(null)
+              setLoading(false)
+              return
+            }
+
+            // Only set user data if verification checks pass
+            setUser(user)
             setUserData({
               uid: user.uid,
               email: user.email,
               displayName: user.displayName || userData.displayName || null,
-              role: (userData.role as UserRole) || 'patient',
+              role: role,
               photoURL: user.photoURL || userData.photoURL || null,
-              doctorData: userData.doctorData || null
+              doctorData: doctorData,
+              hospitalData: hospitalData
             })
           } else {
             // Default to patient if no role found
+            setUser(user)
             setUserData({
               uid: user.uid,
               email: user.email,
@@ -49,6 +73,7 @@ export default function RootLayout() {
           }
         } catch (error) {
           console.error('Error fetching user data:', error)
+          setUser(user)
           setUserData({
             uid: user.uid,
             email: user.email,

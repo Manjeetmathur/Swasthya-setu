@@ -92,8 +92,8 @@ export default function PatientChat() {
           .map(doc => ({
             id: doc.id,
             ...doc.data()
-          }))
-          .filter(doctor => doctor.doctorData?.isVerified) as Doctor[]
+          } as Doctor))
+          .filter(doctor => doctor.doctorData?.isVerified)
         
         setDoctors(verifiedDoctors)
       } catch (error) {

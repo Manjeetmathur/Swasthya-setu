@@ -97,6 +97,24 @@ export default function PatientLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="medicine-info"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="symptoms-check"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="health-tips"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   )
 }

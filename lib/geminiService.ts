@@ -20,95 +20,239 @@ export interface MedicineSuggestion {
 }
 
 class GeminiMedicalService {
-  private model = genAI.getGenerativeModel({ model: 'models/gemini-1.5-flash' })
-
-  async getMedicalResponse(query: string): Promise<MedicalResponse> {
+  // Try Gemini 2.0 Flash, fallback to 1.5 Flash if not available
+  private getModel() {
+    // Try different model names in order of preference
+    const models = [
+      'gemini-2.0-flash-exp', // Experimental version
+      'gemini-2.0-flash',      // Stable version
+      'gemini-1.5-flash',      // Fallback to stable 1.5 Flash
+      'gemini-1.5-pro'         // Last resort fallback
+    ]
+    
+    // Return model configuration - actual availability will be checked when used
+    return genAI.getGenerativeModel({ 
+      model: models[0], // Start with the first one
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.9,
+        topK: 40,
+        maxOutputTokens: 500, // Reduced to keep responses concise
+      }
+    })
+  }
+  
+  private model = this.getModel()
+  
+  // Helper to try different models if one fails
+  private async tryGenerateContent(prompt: string, retryCount = 0): Promise<any> {
+    const models = [
+      'gemini-2.0-flash-exp',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro'
+    ]
+    
     try {
-      const prompt = `You are a medical AI assistant. Please provide accurate medical information about the following query. 
+      const modelToUse = models[retryCount] || models[models.length - 1]
+      const model = genAI.getGenerativeModel({ 
+        model: modelToUse,
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.9,
+          topK: 40,
+          maxOutputTokens: 500,
+        }
+      })
       
-      IMPORTANT GUIDELINES:
-      1. Only answer medical and health-related questions
-      2. Always include a disclaimer that this is for educational purposes only
-      3. Recommend consulting healthcare professionals for serious concerns
-      4. Provide clear, accurate information about medicines, symptoms, and treatments
-      5. If asked about specific medicines, include: uses, dosage guidelines, side effects, and precautions
-      6. Format your response clearly with proper sections
-      
-      Query: ${query}
-      
-      If this is not a medical question, respond with: "I can only help with medical and health-related questions. Please ask about medicines, symptoms, treatments, or general health information."
-      
-      Always end medical responses with: "**Note:** This information is for educational purposes only and not a substitute for professional medical advice. Please consult a healthcare professional for personalized treatment."
-      `
+      return await model.generateContent(prompt)
+    } catch (error: any) {
+      // If we have more models to try, retry with next model
+      if (retryCount < models.length - 1) {
+        console.log(`Model ${models[retryCount]} not available, trying ${models[retryCount + 1]}`)
+        return this.tryGenerateContent(prompt, retryCount + 1)
+      }
+      // If all models failed, throw the error
+      throw error
+    }
+  }
 
-      const result = await this.model.generateContent(prompt)
+  async getMedicalResponse(query: string, mode: 'medicine' | 'symptoms' | 'health-tips' = 'medicine'): Promise<MedicalResponse> {
+    try {
+      let prompt = ''
+      
+      if (mode === 'medicine') {
+        prompt = `You are a medicine information specialist. Provide concise information about medicines ONLY.
+
+User question: "${query}"
+
+Focus on:
+- Medicine name, generic name
+- Uses/indications
+- Dosage information
+- Side effects (key ones only)
+- Precautions/warnings
+- When to consult a doctor
+
+IMPORTANT: Keep response SHORT (2-4 sentences). Use **bold** for key terms. Be direct and factual.
+
+If the question is not about a specific medicine, guide them to ask about a medicine name.
+
+End with: "**Note:** This is educational only. Consult a doctor before taking any medicine."`
+        
+      } else if (mode === 'symptoms') {
+        prompt = `You are a symptoms assessment assistant. Help users understand their symptoms.
+
+User question: "${query}"
+
+Focus on:
+- What the symptoms might indicate (possible causes)
+- When to seek immediate medical attention
+- General guidance (NOT diagnosis)
+- Self-care tips if appropriate
+- Urgency level (mild/moderate/urgent)
+
+IMPORTANT: Keep response SHORT (2-3 sentences). Use **bold** for urgent warnings. NEVER diagnose - only provide guidance.
+
+Always emphasize: "**Important:** This is not a diagnosis. See a doctor for proper evaluation."
+
+End with: "**Note:** For accurate diagnosis, please consult a healthcare professional."`
+        
+      } else if (mode === 'health-tips') {
+        prompt = `You are a wellness and health tips advisor. Provide helpful health tips and wellness advice.
+
+User question: "${query}"
+
+Focus on:
+- General health and wellness tips
+- Preventive care advice
+- Lifestyle recommendations
+- Nutrition guidance
+- Exercise/fitness tips
+- Mental health wellness
+
+IMPORTANT: Keep response SHORT (2-4 sentences). Use **bold** for important points. Be encouraging and practical.
+
+Keep it practical, actionable, and easy to understand.
+
+End with: "**Note:** These are general tips. Consult a healthcare professional for personalized advice."`
+      }
+
+      if (!prompt) {
+        throw new Error('Invalid mode specified')
+      }
+
+      // Try generating content with fallback models
+      const result = await this.tryGenerateContent(prompt)
       const response = result.response
       const text = response.text()
 
-      // Check if it's a non-medical query response
-      if (text.includes('I can only help with medical and health-related questions')) {
-        return {
-          response: 'I can only help with medical and health-related questions. Please ask about medicines, symptoms, treatments, or general health information.'
-        }
-      }
-
-      // Generate medicine suggestions based on the query
-      const suggestions = this.generateMedicineSuggestions(query)
+      // Return the response from Gemini directly - it will handle filtering appropriately
+      // Generate medicine suggestions only in medicine mode
+      const suggestions = mode === 'medicine' 
+        ? await this.generateMedicineSuggestions(query, text)
+        : []
 
       return {
         response: text,
         suggestions: suggestions.length > 0 ? suggestions : undefined
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gemini API Error:', error)
-      throw new Error('Failed to get medical information. Please try again.')
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        status: error?.status,
+        response: error?.response
+      })
+      
+      // More helpful error messages
+      if (error?.message?.includes('model') || error?.message?.includes('not found')) {
+        throw new Error('All Gemini models are unavailable. Please check your API key and ensure you have access to at least one Gemini model (gemini-1.5-flash or gemini-1.5-pro).')
+      }
+      if (error?.message?.includes('API key') || error?.status === 401) {
+        throw new Error('Invalid API key. Please check your EXPO_PUBLIC_GEMINI_API_KEY.')
+      }
+      
+      throw new Error(`Failed to get response: ${error?.message || 'Unknown error'}`)
     }
   }
 
-  private generateMedicineSuggestions(query: string): MedicineSuggestion[] {
-    const lowerQuery = query.toLowerCase()
-    
-    if (lowerQuery.includes('headache') || lowerQuery.includes('pain')) {
-      return [
-        { name: 'Paracetamol', description: 'Pain reliever and fever reducer', usage: '500mg every 4-6 hours' },
-        { name: 'Ibuprofen', description: 'Anti-inflammatory pain reliever', usage: '200-400mg every 4-6 hours' },
-        { name: 'Aspirin', description: 'Pain reliever and blood thinner', usage: '325-650mg every 4 hours' }
-      ]
-    }
-    
-    if (lowerQuery.includes('fever')) {
-      return [
-        { name: 'Paracetamol', description: 'Effective fever reducer', usage: '500-1000mg every 4-6 hours' },
-        { name: 'Ibuprofen', description: 'Reduces fever and inflammation', usage: '200-400mg every 4-6 hours' }
-      ]
-    }
-    
-    if (lowerQuery.includes('cough')) {
-      return [
-        { name: 'Dextromethorphan', description: 'Dry cough suppressant', usage: '15-30mg every 4 hours' },
-        { name: 'Guaifenesin', description: 'Expectorant for wet cough', usage: '200-400mg every 4 hours' },
-        { name: 'Honey', description: 'Natural cough remedy', usage: '1-2 teaspoons as needed' }
-      ]
-    }
+  private async generateMedicineSuggestions(query: string, response: string): Promise<MedicineSuggestion[]> {
+    try {
+      // Only generate suggestions if the query seems to be asking about treatment or medicine recommendations
+      const lowerQuery = query.toLowerCase()
+      const needsSuggestions = 
+        lowerQuery.includes('medicine') || 
+        lowerQuery.includes('medication') || 
+        lowerQuery.includes('drug') || 
+        lowerQuery.includes('treatment') || 
+        lowerQuery.includes('what to take') ||
+        lowerQuery.includes('suggest') ||
+        lowerQuery.includes('recommend') ||
+        lowerQuery.includes('help with') ||
+        lowerQuery.includes('cure') ||
+        lowerQuery.includes('relief')
 
-    if (lowerQuery.includes('cold') || lowerQuery.includes('flu')) {
-      return [
-        { name: 'Paracetamol', description: 'For fever and body aches', usage: '500mg every 4-6 hours' },
-        { name: 'Phenylephrine', description: 'Nasal decongestant', usage: '10mg every 4 hours' },
-        { name: 'Loratadine', description: 'Antihistamine for runny nose', usage: '10mg once daily' }
-      ]
-    }
+      if (!needsSuggestions) {
+        return []
+      }
 
-    if (lowerQuery.includes('stomach') || lowerQuery.includes('acidity') || lowerQuery.includes('heartburn')) {
-      return [
-        { name: 'Omeprazole', description: 'Proton pump inhibitor for acidity', usage: '20mg once daily before meals' },
-        { name: 'Ranitidine', description: 'H2 blocker for heartburn', usage: '150mg twice daily' },
-        { name: 'Antacid', description: 'Quick relief from acidity', usage: '1-2 tablets after meals' }
-      ]
+      // Use AI to generate relevant medicine suggestions based on the query and response
+      const suggestionPrompt = `Based on the following medical query and response, provide 2-4 relevant medicine suggestions in JSON format. Only suggest medicines if appropriate for the condition mentioned.
+
+Query: ${query}
+
+Response: ${response}
+
+Provide suggestions in this exact JSON format (array of objects):
+[
+  {
+    "name": "Medicine Name",
+    "description": "Brief description of what it does",
+    "usage": "Dosage and frequency information"
+  }
+]
+
+If no medicines are appropriate, return an empty array: []
+
+IMPORTANT:
+- Only suggest common, over-the-counter medicines when appropriate
+- Include dosage information
+- Be specific and accurate
+- Return ONLY valid JSON, no additional text
+`
+
+      const suggestionResult = await this.tryGenerateContent(suggestionPrompt)
+      const suggestionText = suggestionResult.response.text()
+
+      // Try to parse JSON from the response
+      try {
+        // Extract JSON from markdown code blocks if present
+        const jsonMatch = suggestionText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || suggestionText.match(/\[[\s\S]*\]/)
+        const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : suggestionText.trim()
+        
+        // Remove any leading/trailing text that's not JSON
+        const cleanJson = jsonString.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '')
+        
+        const suggestions = JSON.parse(cleanJson)
+        
+        // Validate and return suggestions
+        if (Array.isArray(suggestions) && suggestions.length > 0) {
+          return suggestions.filter((s: any) => 
+            s.name && s.description && s.usage
+          ).slice(0, 4) as MedicineSuggestion[]
+        }
+      } catch (parseError) {
+        console.log('Could not parse AI suggestions:', parseError)
+      }
+
+      return []
+    } catch (error) {
+      console.error('Error generating medicine suggestions:', error)
+      return []
     }
-    
-    return []
   }
 
   isMedicalQuery(query: string): boolean {
