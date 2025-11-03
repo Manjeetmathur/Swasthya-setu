@@ -95,7 +95,7 @@ export default function PatientHome() {
             
             <TouchableOpacity
               className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 mb-4"
-              onPress={() => router.push('/patient/medical-assistant')}
+              onPress={() => router.push('/patient/medicine-info')}
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
@@ -118,9 +118,9 @@ export default function PatientHome() {
             <View className="flex-row gap-3">
               <TouchableOpacity
                 className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-800"
-                onPress={() => router.push('/patient/medical-assistant')}
+                onPress={() => router.push('/patient/medicine-info')}
               >
-                <Ionicons name="pill" size={24} color="#8b5cf6" />
+                <Ionicons name="medical" size={24} color="#8b5cf6" />
                 <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
                   Medicine Info
                 </Text>
@@ -131,9 +131,9 @@ export default function PatientHome() {
               
               <TouchableOpacity
                 className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-800"
-                onPress={() => router.push('/patient/medical-assistant')}
+                onPress={() => router.push('/patient/symptoms-check')}
               >
-                <Ionicons name="fitness" size={24} color="#3b82f6" />
+                <Ionicons name="medical" size={24} color="#3b82f6" />
                 <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
                   Symptoms Check
                 </Text>
@@ -144,7 +144,7 @@ export default function PatientHome() {
               
               <TouchableOpacity
                 className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-800"
-                onPress={() => router.push('/patient/medical-assistant')}
+                onPress={() => router.push('/patient/health-tips')}
               >
                 <Ionicons name="heart" size={24} color="#10b981" />
                 <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
