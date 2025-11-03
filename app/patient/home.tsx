@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
 import { useAppointmentsStore } from '@/stores/appointmentsStore'
+import { useEmergencyStore } from '@/stores/emergencyStore'
 import { auth } from '@/lib/firebase'
 import { signOut } from 'firebase/auth'
 import Button from '@/components/Button'
+import EmergencyDialog from '@/components/EmergencyDialog'
+import EmergencyAlert from '@/components/EmergencyAlert'
+import EmergencyServicesSection from '@/components/EmergencyServicesSection'
 import { Ionicons } from '@expo/vector-icons'
 
 export default function PatientHome() {
   const router = useRouter()
   const { userData, logout } = useAuthStore()
   const { appointments, subscribeToAppointments, isLoading } = useAppointmentsStore()
+  const { activeAlert, endEmergency, cancelEmergency } = useEmergencyStore()
   const [refreshing, setRefreshing] = useState(false)
+  const [emergencyDialogVisible, setEmergencyDialogVisible] = useState(false)
 
   useEffect(() => {
     if (userData?.uid) {
@@ -28,11 +34,40 @@ export default function PatientHome() {
     setTimeout(() => setRefreshing(false), 1000)
   }
 
+  const handleEmergencyTriggered = (emergencyId: string) => {
+    setEmergencyDialogVisible(false)
+  }
+
+  const handleCancelEmergency = async () => {
+    if (!activeAlert) return
+
+    Alert.alert(
+      'Cancel Emergency',
+      'Are you sure you want to cancel this emergency alert?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await cancelEmergency(activeAlert.id)
+              Alert.alert('Success', 'Emergency alert cancelled')
+            } catch (error) {
+              Alert.alert('Error', 'Failed to cancel emergency alert')
+            }
+          }
+        }
+      ]
+    )
+  }
+
   const handleLogout = async () => {
     try {
-      await signOut(auth)
       await logout()
-      router.replace('/login')
+      await signOut(auth)
+      // Use replace to clear navigation history
+      router.replace('/role-selection')
     } catch (error) {
       console.error('Logout error:', error)
     }
@@ -86,6 +121,19 @@ export default function PatientHome() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Active Emergency Alert */}
+          {activeAlert && (
+            <EmergencyAlert
+              alert={activeAlert}
+              onCancel={handleCancelEmergency}
+            />
+          )}
+
+          {/* Emergency Services Section */}
+          <EmergencyServicesSection
+            onEmergency={() => setEmergencyDialogVisible(true)}
+          />
 
           {/* Medical AI Assistant Cards */}
           <View className="mb-6">
@@ -217,6 +265,13 @@ export default function PatientHome() {
           )}
         </View>
       </ScrollView>
+
+      {/* Emergency Dialog */}
+      <EmergencyDialog
+        visible={emergencyDialogVisible}
+        onClose={() => setEmergencyDialogVisible(false)}
+        onEmergencyTriggered={handleEmergencyTriggered}
+      />
     </SafeAreaView>
   )
 }

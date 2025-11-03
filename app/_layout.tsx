@@ -18,7 +18,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     initializeTheme()
-  }, [])
+  }, [initializeTheme])
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -68,8 +68,8 @@ export default function RootLayout() {
   }, [setUser, setUserData, setLoading])
 
   return (
-    <ThemeProvider>
-      <SafeAreaProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -77,8 +77,8 @@ export default function RootLayout() {
           }}
         />
         <CallManager />
-      </SafeAreaProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   )
 }
 
