@@ -82,17 +82,21 @@ export default function PatientLayout() {
           )
         }}
       />
+
       <Tabs.Screen
-        name="profile"
+        name="medical-assistant"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          )
+          href: null,
         }}
       />
       <Tabs.Screen
-        name="medical-assistant"
+        name="hospitals"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
         options={{
           href: null,
         }}
