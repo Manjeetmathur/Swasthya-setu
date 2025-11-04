@@ -328,7 +328,7 @@ export default function Login() {
             <Ionicons name="arrow-back" size={24} color={roleInfo.color} />
           </TouchableOpacity>
 
-          <View className="flex-1 justify-center">
+          <View className="flex-1  mt-5">
             {/* Role-specific header */}
             <View className="items-center mb-8">
               <View className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
