@@ -401,18 +401,6 @@ export default function HealthcareMapScreen() {
     );
   }
 
-  if (!location) {
-    return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="location-outline" size={64} color="#6b7280" />
-        <Text style={styles.errorText}>Unable to get your location</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={getCurrentLocation}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
 
 
   return (
@@ -423,54 +411,6 @@ export default function HealthcareMapScreen() {
         <Text style={styles.headerSubtitle}>
           Find nearby pharmacies, hospitals, and clinics
         </Text>
-      </View>
-
-      {/* Location Search */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search location (e.g., Ranchi, Delhi, Mumbai)"
-            value={searchLocation}
-            onChangeText={handleSearchInputChange}
-            onSubmitEditing={searchForLocation}
-            onFocus={() => {
-              if (suggestions.length > 0) {
-                setShowSuggestions(true);
-              }
-            }}
-            returnKeyType="search"
-          />
-          {searchLocation.length > 0 && (
-            <TouchableOpacity onPress={() => {
-              setSearchLocation('');
-              setSuggestions([]);
-              setShowSuggestions(false);
-            }} style={styles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#6b7280" />
-            </TouchableOpacity>
-          )}
-        </View>
-        <TouchableOpacity 
-          style={styles.searchButton} 
-          onPress={searchForLocation}
-          disabled={!searchLocation.trim()}
-        >
-          <Ionicons name="navigate" size={18} color="#ffffff" />
-        </TouchableOpacity>
-        
-        {searchCoords && (
-          <TouchableOpacity 
-            style={styles.currentLocationButton} 
-            onPress={() => {
-              setSearchCoords(null);
-              setSearchLocation('');
-            }}
-          >
-            <Ionicons name="location" size={18} color="#2563eb" />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Suggestions Dropdown */}
