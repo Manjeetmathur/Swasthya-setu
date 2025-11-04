@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { View, Text, TouchableOpacity } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Appointment } from '@/stores/appointmentsStore'
@@ -18,15 +19,34 @@ export default function AppointmentsSection({
 }: AppointmentsSectionProps) {
   const router = useRouter()
   const { t } = useLanguageStore()
+  const [showAll, setShowAll] = useState(false)
+  
   const upcomingAppointments = appointments.filter(
     (apt) => apt.status === 'confirmed' || apt.status === 'pending'
-  ).slice(0, 3)
+  )
+  
+  const displayedAppointments = showAll ? upcomingAppointments : upcomingAppointments.slice(0, 2)
 
   return (
     <View>
-      <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-        {t('home.upcoming_appointments')}
-      </Text>
+      <View className="flex-row items-center justify-between mb-4">
+        <Text className="text-xl font-bold text-gray-900 dark:text-white">
+          {t('home.upcoming_appointments')}
+        </Text>
+        <TouchableOpacity
+          onPress={() => setShowAll(!showAll)}
+          className="flex-row items-center"
+        >
+          <Text className="text-blue-600 dark:text-blue-400 font-medium text-sm mr-1">
+            {showAll ? 'Show Less' : 'View All'}
+          </Text>
+          <Ionicons 
+            name={showAll ? 'chevron-up' : 'chevron-down'} 
+            size={16} 
+            color="#2563eb" 
+          />
+        </TouchableOpacity>
+      </View>
 
       {isLoading ? (
         <Text className="text-gray-500 text-center py-8">{t('home.loading_appointments')}</Text>
@@ -44,7 +64,7 @@ export default function AppointmentsSection({
           />
         </View>
       ) : (
-        upcomingAppointments.map((appointment) => (
+        displayedAppointments.map((appointment) => (
           <TouchableOpacity
             key={appointment.id}
             onPress={() => onAppointmentPress(appointment)}

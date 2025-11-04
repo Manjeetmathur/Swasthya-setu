@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import { Tabs, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
 import { Alert } from 'react-native'
 
 export default function DoctorLayout() {
   const router = useRouter()
   const { userData, isAuthenticated, logout } = useAuthStore()
+  const { isDark } = useThemeStore()
 
   useEffect(() => {
     if (!isAuthenticated || !userData) {
@@ -41,20 +43,38 @@ export default function DoctorLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#6b7280',
+        tabBarInactiveTintColor: isDark ? '#9ca3af' : '#6b7280',
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: isDark ? '#1f2937' : '#ffffff',
           borderTopWidth: 1,
-          borderTopColor: '#e5e7eb'
+          borderTopColor: isDark ? '#374151' : '#e5e7eb'
         }
       }}
     >
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="grid" size={size} color={color} />
+          )
+        }}
+      />
       <Tabs.Screen
         name="schedule"
         options={{
           title: 'Schedule',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" size={size} color={color} />
+          )
+        }}
+      />
+      <Tabs.Screen
+        name="patients"
+        options={{
+          title: 'Patients',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
           )
         }}
       />

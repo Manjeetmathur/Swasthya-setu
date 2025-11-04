@@ -24,6 +24,7 @@ export interface BedBooking {
   bedNumber: string
   ward: string
   department: string
+  hospitalId?: string
   reason?: string
   urgency: 'normal' | 'urgent' | 'emergency'
   status: 'pending' | 'approved' | 'rejected' | 'completed'
@@ -155,15 +156,17 @@ export const useBedManagementStore = create<BedManagementStore>((set, get) => ({
     try {
       set({ isLoading: true })
 
+      const bed = get().beds.find(b => b.id === bedId)
       const bookingData = {
         patientId,
         doctorId,
         patientName,
         doctorName,
         bedId,
-        bedNumber: get().beds.find(b => b.id === bedId)?.bedNumber || '',
+        bedNumber: bed?.bedNumber || '',
         ward,
         department,
+        hospitalId: bed?.hospitalId || null,
         urgency,
         reason: reason || '',
         status: urgency === 'emergency' ? 'approved' : 'pending',

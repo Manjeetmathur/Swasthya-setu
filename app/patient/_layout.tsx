@@ -90,6 +90,15 @@ export default function PatientLayout() {
         }}
       />
       <Tabs.Screen
+        name="book-beds"
+        options={{
+          title: 'Book Beds',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bed" size={size} color={color} />
+          )
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           href: null,

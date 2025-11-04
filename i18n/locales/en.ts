@@ -45,6 +45,46 @@ export const en = {
     loading_appointments: "Loading appointments...",
     reason: "Reason",
     
+    // Book Appointment Screen
+    book: {
+      title: "Book Appointment",
+      select_doctor: "Select Doctor",
+      choose_doctor: "Choose a doctor",
+      verified: "Verified",
+      select_date: "Select Date",
+      select_date_placeholder: "Select date",
+      select_time: "Select Time",
+      loading_slots: "Loading available slots...",
+      skip_loading: "Skip and show all slots",
+      booked: "Booked",
+      reason_for_visit: "Reason for Visit",
+      reason_placeholder: "Describe your symptoms or reason",
+      book_appointment: "Book Appointment",
+      loading_doctors: "Loading doctors...",
+      no_doctors_available: "No doctors available",
+      years_experience: "years experience",
+      consultation_fee: "consultation fee",
+      video_call: "Video Call",
+      calling: "Calling...",
+      select_date_modal: "Select Date",
+      error: "Error",
+      success: "Success",
+      please_fill_all_fields: "Please fill in all fields",
+      user_not_found: "User not found",
+      appointment_booked_success: "Appointment booked successfully!",
+      failed_to_book: "Failed to book appointment",
+      failed_to_load_doctors: "Failed to load doctors",
+      could_not_load_slots: "Could not load booked slots. All slots will be shown as available.",
+      please_login: "Please log in to start a video call",
+      video_call_initiated: "Video Call Initiated",
+      calling_doctor: "Calling Dr.",
+      failed_to_start_call: "Failed to start video call. Please try again.",
+      warning: "Warning",
+      doctor_prefix: "Dr.",
+      patient: "Patient",
+      doctor: "Doctor"
+    },
+    
     // Emergency Section
     emergency_services_title: "Emergency Services",
     emergency_ambulance: "Emergency Ambulance",
@@ -131,9 +171,7 @@ export const en = {
     
     // Common
     loading: "Loading...",
-    error: "Error",
     try_again: "Try Again",
-    cancel: "Cancel",
     ok: "OK"
   },
   
@@ -298,6 +336,272 @@ export const en = {
     km_away: "km away",
     beds_available: "beds available",
     close: "Close",
-    emergency_call_info: "Always call emergency services for life-threatening situations"
+    emergency_call_info: "Always call emergency services for life-threatening situations",
+    
+    // Emergency Dialog
+    dialog: {
+      title: "Emergency Services",
+      select_type: "Select Emergency Type",
+      select_type_description: "Choose the type of emergency you're experiencing",
+      confirmation: "Confirmation",
+      alert_banner_text: "Confirming this will immediately notify nearby hospitals of your emergency and share your location",
+      what_happens_next: "What happens next:",
+      what_happens_1: "Location shared with nearby hospitals",
+      what_happens_2: "Emergency responders dispatch immediately",
+      what_happens_3: "Video link established for assessment",
+      send_alert: "Yes, Send Emergency Alert",
+      sending_alert: "Sending Alert...",
+      cancel: "Cancel",
+      alert_sent_title: "Emergency Alert Sent! 🚨",
+      alert_sent_message: "Nearby hospitals have been notified. Emergency services are on their way.",
+      error_title: "Error",
+      error_message: "Failed to send emergency alert",
+      emergency_medical_assistance: "Emergency medical assistance required",
+      current_location: "Current location",
+      patient: "Patient",
+      unknown: "Unknown",
+      types: {
+        cardiac: {
+          label: "Cardiac Emergency",
+          description: "Heart attack or chest pain"
+        },
+        accident: {
+          label: "Accident/Injury",
+          description: "Road accident, fall, or severe injury"
+        },
+        eye_injury: {
+          label: "Eye Injury/Loss of Vision",
+          description: "Eye trauma or sudden vision loss"
+        },
+        pregnancy: {
+          label: "Pregnancy/Childbirth",
+          description: "Complications during pregnancy or labor"
+        },
+        trauma: {
+          label: "Trauma/Bleeding",
+          description: "Severe bleeding or traumatic injury"
+        },
+        respiratory: {
+          label: "Respiratory Distress",
+          description: "Difficulty breathing or shortness of breath"
+        },
+        stroke: {
+          label: "Stroke/Neurological",
+          description: "Facial drooping, slurred speech, or weakness"
+        },
+        allergic: {
+          label: "Allergic Reaction",
+          description: "Severe allergic reaction or anaphylaxis"
+        },
+        poisoning: {
+          label: "Poisoning/Overdose",
+          description: "Drug overdose or substance poisoning"
+        },
+        seizure: {
+          label: "Seizure",
+          description: "Convulsions or seizure activity"
+        },
+        unconscious: {
+          label: "Unconscious/Collapse",
+          description: "Loss of consciousness or fainting"
+        },
+        burn: {
+          label: "Burn/Chemical Injury",
+          description: "Thermal, chemical, or electrical burns"
+        },
+        choking: {
+          label: "Choking/Airway",
+          description: "Object stuck in throat or airway blockage"
+        },
+        chest_pain: {
+          label: "Chest Pain",
+          description: "Severe chest discomfort or pressure"
+        },
+        abdominal: {
+          label: "Severe Abdominal Pain",
+          description: "Severe stomach or abdominal pain"
+        },
+        fracture: {
+          label: "Fracture/Bone Break",
+          description: "Suspected broken bone or severe sprain"
+        },
+        spinal: {
+          label: "Spinal Injury",
+          description: "Back or neck injury with suspected spinal damage"
+        },
+        drowning: {
+          label: "Drowning/Water Emergency",
+          description: "Water-related emergency or near drowning"
+        },
+        electrocution: {
+          label: "Electrocution/Shock",
+          description: "Electric shock or lightning strike injury"
+        },
+        severe_headache: {
+          label: "Severe Headache",
+          description: "Sudden severe headache or migraine"
+        },
+        mental_crisis: {
+          label: "Mental Health Crisis",
+          description: "Suicidal thoughts, severe anxiety, or mental emergency"
+        },
+        infection: {
+          label: "Severe Infection/Sepsis",
+          description: "High fever, severe infection, or sepsis"
+        },
+        gunshot: {
+          label: "Gunshot/Stab Wound",
+          description: "Gunshot or stab wound injury"
+        },
+        general: {
+          label: "Other Emergency",
+          description: "Other medical or non-medical emergency"
+        }
+      }
+    }
+  },
+  
+  // AIScan Section
+  aiscan: {
+    title: "AIScan",
+    subtitle: "One scan. Zero risk. Eat safe.",
+    scan_food_label: "Scan Food Label or Medicine",
+    scan_description: "Scan food labels or medicine packets. AI reads ingredients/medicine info in 3 seconds.",
+    take_photo: "Take Photo",
+    choose_from_gallery: "Choose from Gallery",
+    analyzing_label: "Analyzing label...",
+    analyzing_description: "AI is reading ingredients and checking for allergens",
+    hindi: "हिंदी",
+    english: "English",
+    medicine_name: "Medicine Name",
+    generic: "Generic",
+    uses_indications: "Uses / Indications",
+    indications: "Indications",
+    dosage: "Dosage",
+    side_effects: "Side Effects",
+    contraindications: "Contraindications",
+    expected_results: "Expected Results",
+    precautions: "Precautions",
+    drug_interactions: "Drug Interactions",
+    danger_not_eat: "DANGER - DO NOT EAT",
+    contains: "Contains",
+    risk: "risk",
+    safe_to_eat: "SAFE TO EAT",
+    nutrition_score: "Nutrition Score",
+    score: "Score",
+    ingredients: "Ingredients",
+    warnings: "Warnings",
+    safe_alternatives: "Safe Alternatives",
+    scan_another: "Scan Another",
+    share: "Share",
+    permission_required: "Permission Required",
+    camera_access_needed: "Camera access is needed to scan labels",
+    gallery_access_needed: "Gallery access is needed",
+    error: "Error",
+    failed_to_take_photo: "Failed to take photo",
+    failed_to_pick_image: "Failed to pick image",
+    failed_to_process: "Failed to process image",
+    analysis_failed: "Analysis Failed",
+    failed_to_analyze: "Failed to analyze label",
+    translation_failed: "Translation Failed",
+    failed_to_translate: "Failed to translate",
+    nothing_to_share: "Nothing to share",
+    failed_to_share: "Failed to share"
+  },
+  
+  // Skin Rash Detection Section
+  skin_rash: {
+    title: "Skin Rash Detection",
+    subtitle: "AI-powered dermatology analysis",
+    scan_skin_rash: "Scan Skin Rash",
+    scan_description: "Take a clear photo of the affected skin area. AI will analyze the condition and provide recommendations.",
+    take_photo: "Take Photo",
+    choose_from_gallery: "Choose from Gallery",
+    analyzing_condition: "Analyzing skin condition...",
+    analyzing_description: "AI is examining the image and identifying potential conditions",
+    hindi: "हिंदी",
+    english: "English",
+    description: "Description",
+    observed_symptoms: "Observed Symptoms",
+    possible_causes: "Possible Causes",
+    recommendations: "Recommendations",
+    when_to_see_doctor: "When to See a Doctor",
+    disclaimer: "⚠️ This is an AI-powered analysis and should not replace professional medical advice. Always consult a dermatologist or healthcare provider for accurate diagnosis and treatment.",
+    scan_another: "Scan Another",
+    share: "Share",
+    permission_required: "Permission Required",
+    camera_access_needed: "Camera access is needed to take photos",
+    gallery_access_needed: "Gallery access is needed to select images",
+    error: "Error",
+    failed_to_take_photo: "Failed to take photo",
+    failed_to_pick_image: "Failed to pick image",
+    image_data_not_available: "Image data not available",
+    analysis_failed: "Analysis Failed",
+    failed_to_analyze: "Failed to analyze skin rash",
+    translation_failed: "Translation Failed",
+    failed_to_translate: "Failed to translate",
+    nothing_to_share: "Nothing to share",
+    failed_to_share: "Failed to share",
+    urgency: "URGENCY",
+    high: "HIGH",
+    medium: "MEDIUM",
+    low: "LOW",
+    severe: "SEVERE",
+    moderate: "MODERATE",
+    mild: "MILD"
+  },
+  
+  // MediMind Section
+  medimind: {
+    title: "MediMind",
+    subtitle: "Mental health hides. We hear it.",
+    last_checkin: "Last Check-in",
+    how_are_you_today: "How are you today?",
+    speak_for_5_seconds: "Speak for 5 seconds. We'll listen to your tone and energy.",
+    recording: "Recording... Speak now",
+    analyzing_voice: "Analyzing your voice...",
+    press_to_record: "Press to record",
+    analysis_result: "Analysis Result",
+    tone: "Tone",
+    energy: "Energy",
+    indicators: "Indicators",
+    slow_speech_detected: "Slow speech detected",
+    flat_tone_detected: "Flat tone detected",
+    pauses_detected: "Pauses detected",
+    low_volume_detected: "Low volume detected",
+    confidence: "Confidence",
+    personalized_suggestions: "Personalized Suggestions",
+    generating_suggestions: "Generating personalized suggestions...",
+    connect_to_therapist: "Connect to Therapist",
+    three_taps_live_call: "3 taps → Live video call with real person",
+    you_dont_seem_like_yourself: "You don't seem like yourself",
+    not_now: "Not Now",
+    talk_now: "Talk Now",
+    what_did_you_say: "What did you say?",
+    enter_transcription: "Enter what you said during the recording for better analysis (optional)",
+    transcription_placeholder: "E.g., I'm just tired...",
+    skip: "Skip",
+    analyze: "Analyze",
+    permission_required: "Permission Required",
+    microphone_access_needed: "Microphone access is needed to record your voice",
+    error: "Error",
+    failed_to_start_recording: "Failed to start recording",
+    no_recording_found: "No recording found",
+    failed_to_stop_recording: "Failed to stop recording",
+    analysis_failed: "Analysis Failed",
+    failed_to_analyze_voice: "Failed to analyze voice",
+    warning: "Warning",
+    analysis_completed_not_saved: "Analysis completed but failed to save. Result displayed below.",
+    failed_to_connect: "Failed to connect. Please try again.",
+    failed_to_connect_therapist: "Failed to connect to therapist",
+    connect_therapist_confirm: "Connect to Therapist",
+    connect_therapist_message: "This will connect you to a mental health professional. Continue?",
+    cancel: "Cancel",
+    connect: "Connect",
+    great: "Great",
+    okay: "Okay",
+    low: "Low",
+    very_low: "Very Low",
+    patient: "Patient"
   }
 }

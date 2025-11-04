@@ -7,6 +7,7 @@ import { useAppointmentsStore, Appointment } from '@/stores/appointmentsStore'
 import { useCallStore, CallData } from '@/stores/callStore'
 import { useEmergencyStore } from '@/stores/emergencyStore'
 import { useBedManagementStore } from '@/stores/bedManagementStore'
+import { useStaffStore } from '@/stores/staffStore'
 import { db} from '@/lib/firebase'
 import { doc, getDoc, Timestamp, collection, query, where, getDocs, addDoc, onSnapshot } from 'firebase/firestore'
 import { Calendar } from 'react-native-calendars'
@@ -27,7 +28,8 @@ export default function PatientHome() {
   const { appointments, subscribeToAppointments, isLoading } = useAppointmentsStore()
   const { initiateCall, currentCall, setCurrentCall, subscribeToIncomingCalls } = useCallStore()
   const { activeAlert, cancelEmergency } = useEmergencyStore()
-  const { beds, subscribeToBeds, getBedStats, isLoading: bedLoading } = useBedManagementStore()
+  const { beds, subscribeToBeds, isLoading: bedLoading } = useBedManagementStore()
+  const { staff, subscribeToStaff } = useStaffStore()
   const { t } = useLanguageStore()
   const [refreshing, setRefreshing] = useState(false)
   const [showDoctorDialog, setShowDoctorDialog] = useState(false)
@@ -47,9 +49,13 @@ export default function PatientHome() {
   const [appointmentTime, setAppointmentTime] = useState('')
   const [appointmentReason, setAppointmentReason] = useState('')
   const [showCalendar, setShowCalendar] = useState(false)
+  const [bedNumber, setBedNumber] = useState('')
+  const [bedCategory, setBedCategory] = useState<'general' | 'icu'>('general')
   const [bookedSlots, setBookedSlots] = useState<string[]>([])
   const [loadingAppointment, setLoadingAppointment] = useState(false)
   const [bedStats, setBedStats] = useState<{total: number, available: number, occupied: number, maintenance: number} | null>(null)
+  const [bedUnsubscribe, setBedUnsubscribe] = useState<(() => void) | null>(null)
+  const [staffUnsubscribe, setStaffUnsubscribe] = useState<(() => void) | null>(null)
 
   useEffect(() => {
     if (userData?.uid) {
@@ -113,6 +119,11 @@ export default function PatientHome() {
       return
     }
 
+    if (!bedNumber.trim()) {
+      Alert.alert('Error', 'Please enter bed number')
+      return
+    }
+
     setLoadingAppointment(true)
     try {
       const selectedDate = new Date(appointmentDate)
@@ -128,10 +139,12 @@ export default function PatientHome() {
         status: 'pending',
         reason: appointmentReason.trim(),
         appointmentType: 'hospital',
+        bedNumber: bedNumber.trim(),
+        bedCategory: bedCategory,
         createdAt: Timestamp.now()
       })
 
-      Alert.alert('Success', 'Appointment booked successfully!', [
+      Alert.alert('Success', 'Appointment request submitted! Hospital will confirm your booking.', [
         { 
           text: 'OK', 
           onPress: () => {
@@ -139,6 +152,8 @@ export default function PatientHome() {
             setAppointmentDate('')
             setAppointmentTime('')
             setAppointmentReason('')
+            setBedNumber('')
+            setBedCategory('general')
           }
         }
       ])
@@ -216,19 +231,60 @@ export default function PatientHome() {
   }
 
   const handleHospitalPress = (hospital: Hospital) => {
+    // Clean up previous subscriptions
+    if (bedUnsubscribe) {
+      bedUnsubscribe()
+    }
+    if (staffUnsubscribe) {
+      staffUnsubscribe()
+    }
+    
     setSelectedHospital(hospital)
     setHospitalModalVisible(true)
+    
     // Subscribe to beds for this hospital
-    subscribeToBeds(undefined, hospital.id)
+    const unsubscribeBeds = subscribeToBeds(undefined, hospital.id)
+    setBedUnsubscribe(() => unsubscribeBeds)
+    
+    // Subscribe to staff for this hospital
+    const unsubscribeStaff = subscribeToStaff(hospital.id)
+    setStaffUnsubscribe(() => unsubscribeStaff)
   }
 
-  // Update bed stats when beds change
+  // Clean up subscriptions when modal closes or hospital changes
   useEffect(() => {
-    if (beds.length > 0 && selectedHospital) {
-      const stats = getBedStats()
-      setBedStats(stats)
+    return () => {
+      if (bedUnsubscribe) {
+        bedUnsubscribe()
+      }
+      if (staffUnsubscribe) {
+        staffUnsubscribe()
+      }
     }
-  }, [beds, selectedHospital, getBedStats])
+  }, [bedUnsubscribe, staffUnsubscribe])
+
+  // Update bed stats when beds change - filter by selected hospital
+  useEffect(() => {
+    if (selectedHospital && beds.length > 0) {
+      // Filter beds for the selected hospital only
+      const hospitalBeds = beds.filter(bed => bed.hospitalId === selectedHospital.id)
+      const stats = {
+        total: hospitalBeds.length,
+        available: hospitalBeds.filter(bed => bed.status === 'available').length,
+        occupied: hospitalBeds.filter(bed => bed.status === 'occupied').length,
+        maintenance: hospitalBeds.filter(bed => bed.status === 'maintenance').length
+      }
+      setBedStats(stats)
+    } else if (selectedHospital && beds.length === 0) {
+      // No beds available for this hospital
+      setBedStats({
+        total: 0,
+        available: 0,
+        occupied: 0,
+        maintenance: 0
+      })
+    }
+  }, [beds, selectedHospital])
 
   const handleCallHospital = (phoneNumber: string) => {
     Alert.alert(
@@ -285,28 +341,54 @@ export default function PatientHome() {
   }
 
 
-  const handleDoctorClick = async (appointment: Appointment) => {
-    setLoadingDoctor(true)
-    setShowDoctorDialog(true)
-    setSelectedAppointment(appointment)
-    
-    try {
-      if (!appointment.doctorId) return
-      const doctorRef = doc(db, 'users', appointment.doctorId)
-      const doctorSnap = await getDoc(doctorRef)
-      
-      if (doctorSnap.exists()) {
-        setSelectedDoctor({
-          id: doctorSnap.id,
-          ...doctorSnap.data()
-        } as Doctor)
-      } else {
-        console.error('Doctor not found')
+  const handleAppointmentClick = async (appointment: Appointment) => {
+    // Check if it's a hospital appointment
+    if (appointment.appointmentType === 'hospital' || appointment.hospitalId) {
+      // Handle hospital appointment
+      if (appointment.hospitalId) {
+        try {
+          const hospitalRef = doc(db, 'users', appointment.hospitalId)
+          const hospitalSnap = await getDoc(hospitalRef)
+          
+          if (hospitalSnap.exists()) {
+            const hospitalData = hospitalSnap.data()
+            if (hospitalData.hospitalData) {
+              const hospital: Hospital = {
+                id: hospitalSnap.id,
+                hospitalData: hospitalData.hospitalData
+              }
+              handleHospitalPress(hospital)
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching hospital details:', error)
+          Alert.alert(t('home.error'), 'Failed to load hospital details')
+        }
       }
-    } catch (error) {
-      console.error('Error fetching doctor details:', error)
-    } finally {
-      setLoadingDoctor(false)
+    } else {
+      // Handle doctor appointment
+      setLoadingDoctor(true)
+      setShowDoctorDialog(true)
+      setSelectedAppointment(appointment)
+      
+      try {
+        if (!appointment.doctorId) return
+        const doctorRef = doc(db, 'users', appointment.doctorId)
+        const doctorSnap = await getDoc(doctorRef)
+        
+        if (doctorSnap.exists()) {
+          setSelectedDoctor({
+            id: doctorSnap.id,
+            ...doctorSnap.data()
+          } as Doctor)
+        } else {
+          console.error('Doctor not found')
+        }
+      } catch (error) {
+        console.error('Error fetching doctor details:', error)
+      } finally {
+        setLoadingDoctor(false)
+      }
     }
   }
 
@@ -522,7 +604,7 @@ export default function PatientHome() {
           <AppointmentsSection
             appointments={appointments}
             isLoading={isLoading}
-            onAppointmentPress={handleDoctorClick}
+            onAppointmentPress={handleAppointmentClick}
           />
         </View>
       </ScrollView>
@@ -732,7 +814,18 @@ export default function PatientHome() {
         visible={hospitalModalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setHospitalModalVisible(false)}
+        onRequestClose={() => {
+          // Clean up subscriptions when modal closes
+          if (bedUnsubscribe) {
+            bedUnsubscribe()
+            setBedUnsubscribe(null)
+          }
+          if (staffUnsubscribe) {
+            staffUnsubscribe()
+            setStaffUnsubscribe(null)
+          }
+          setHospitalModalVisible(false)
+        }}
       >
         <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
           <View className="flex-row items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -740,7 +833,18 @@ export default function PatientHome() {
               Hospital Details
             </Text>
             <TouchableOpacity
-              onPress={() => setHospitalModalVisible(false)}
+              onPress={() => {
+                // Clean up subscriptions when modal closes
+                if (bedUnsubscribe) {
+                  bedUnsubscribe()
+                  setBedUnsubscribe(null)
+                }
+                if (staffUnsubscribe) {
+                  staffUnsubscribe()
+                  setStaffUnsubscribe(null)
+                }
+                setHospitalModalVisible(false)
+              }}
               className="p-2 rounded-full bg-gray-100 dark:bg-gray-800"
             >
               <Ionicons name="close" size={24} color="#6b7280" />
@@ -874,115 +978,72 @@ export default function PatientHome() {
                   )}
                 </View>
                 
-                {bedStats ? (
+                {bedStats ? (() => {
+                  // Filter beds for the selected hospital only
+                  const hospitalBeds = beds.filter(b => b.hospitalId === selectedHospital?.id)
+                  return (
                   <View>
                     {/* Overall Stats Cards */}
                     <View className="flex-row gap-3 mb-4">
-                      <View className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-3 border border-green-200 dark:border-green-800">
-                        <View className="flex-row items-center mb-2">
-                          <View className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded mr-2">
-                            <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                      <View className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center">
+                            <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                            <Text className="ml-2 text-gray-700 dark:text-gray-300 font-medium">Available</Text>
                           </View>
-                          <Text className="text-xs text-gray-600 dark:text-gray-400 font-medium">Available</Text>
+                          <Text className="text-green-600 dark:text-green-400 font-bold text-lg">{bedStats.available}</Text>
                         </View>
-                        <Text className="text-2xl font-bold text-green-600 dark:text-green-400" style={{ lineHeight: 32 }}>
-                          {bedStats.available}
-                        </Text>
                       </View>
                       
-                      <View className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
-                        <View className="flex-row items-center mb-2">
-                          <View className="bg-orange-100 dark:bg-orange-900/30 p-1.5 rounded mr-2">
-                            <Ionicons name="person" size={16} color="#f59e0b" />
+                      <View className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center">
+                            <Ionicons name="person" size={18} color="#ef4444" />
+                            <Text className="ml-2 text-gray-700 dark:text-gray-300 font-medium">Occupied</Text>
                           </View>
-                          <Text className="text-xs text-gray-600 dark:text-gray-400 font-medium">Occupied</Text>
+                          <Text className="text-red-600 dark:text-red-400 font-bold text-lg">{bedStats.occupied}</Text>
                         </View>
-                        <Text className="text-2xl font-bold text-orange-600 dark:text-orange-400" style={{ lineHeight: 32 }}>
-                          {bedStats.occupied}
-                        </Text>
                       </View>
                     </View>
 
                     {/* Bed Type Breakdown */}
                     <View className="space-y-3">
                       {/* General Beds */}
-                      <View className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                      <View className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                         <View className="flex-row items-center justify-between mb-3">
-                          <View className="flex-row items-center flex-1">
-                            <Ionicons name="bed-outline" size={18} color="#3b82f6" />
-                            <Text className="text-gray-700 dark:text-gray-300 font-semibold ml-2">
-                              General Beds
-                            </Text>
-                          </View>
                           <View className="flex-row items-center">
-                            <Text className="text-xs text-gray-600 dark:text-gray-400 mr-2" numberOfLines={1}>
-                              {beds.filter(b => b.type === 'general' && b.status === 'available').length}/{beds.filter(b => b.type === 'general').length}
-                            </Text>
-                            <View className={`px-2 py-0.5 rounded-full ${
-                              (beds.filter(b => b.type === 'general' && b.status === 'available').length / Math.max(beds.filter(b => b.type === 'general').length, 1)) > 0.3
-                                ? 'bg-green-100 dark:bg-green-900/30'
-                                : 'bg-red-100 dark:bg-red-900/30'
-                            }`}>
-                              <Text className={`text-xs font-semibold ${
-                                (beds.filter(b => b.type === 'general' && b.status === 'available').length / Math.max(beds.filter(b => b.type === 'general').length, 1)) > 0.3
-                                  ? 'text-green-700 dark:text-green-300'
-                                  : 'text-red-700 dark:text-red-300'
-                              }`}>
-                                {Math.round((beds.filter(b => b.type === 'general' && b.status === 'available').length / Math.max(beds.filter(b => b.type === 'general').length, 1)) * 100)}%
-                              </Text>
-                            </View>
+                            <Ionicons name="bed" size={20} color="#3b82f6" />
+                            <Text className="ml-2 text-gray-900 dark:text-white font-semibold text-base">General Beds</Text>
                           </View>
                         </View>
-                        <View className="flex-row items-center">
-                          <View className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                            <View 
-                              className="bg-blue-500 h-2.5 rounded-full" 
-                              style={{ 
-                                width: `${beds.filter(b => b.type === 'general').length > 0 ? (beds.filter(b => b.type === 'general' && b.status === 'available').length / beds.filter(b => b.type === 'general').length) * 100 : 0}%` 
-                              }} 
-                            />
-                          </View>
+                        
+                        <View className="flex-row items-center justify-between">
+                          <Text className="text-sm text-gray-600 dark:text-gray-400">
+                            Available
+                          </Text>
+                          <Text className="text-gray-900 dark:text-white font-semibold">
+                            {hospitalBeds.filter(b => b.type === 'general' && b.status === 'available').length} / {hospitalBeds.filter(b => b.type === 'general').length}
+                          </Text>
                         </View>
                       </View>
 
                       {/* ICU Beds */}
-                      {selectedHospital.hospitalData.icuBeds && (
-                        <View className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                      {hospitalBeds.filter(b => b.type === 'icu').length > 0 && (
+                        <View className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                           <View className="flex-row items-center justify-between mb-3">
-                            <View className="flex-row items-center flex-1">
-                              <Ionicons name="medical" size={18} color="#ef4444" />
-                              <Text className="text-gray-700 dark:text-gray-300 font-semibold ml-2">
-                                ICU Beds
-                              </Text>
-                            </View>
                             <View className="flex-row items-center">
-                              <Text className="text-xs text-gray-600 dark:text-gray-400 mr-2" numberOfLines={1}>
-                                {beds.filter(b => b.type === 'icu' && b.status === 'available').length}/{beds.filter(b => b.type === 'icu').length}
-                              </Text>
-                              <View className={`px-2 py-0.5 rounded-full ${
-                                (beds.filter(b => b.type === 'icu' && b.status === 'available').length / Math.max(beds.filter(b => b.type === 'icu').length, 1)) > 0.2
-                                  ? 'bg-green-100 dark:bg-green-900/30'
-                                  : 'bg-red-100 dark:bg-red-900/30'
-                              }`}>
-                                <Text className={`text-xs font-semibold ${
-                                  (beds.filter(b => b.type === 'icu' && b.status === 'available').length / Math.max(beds.filter(b => b.type === 'icu').length, 1)) > 0.2
-                                    ? 'text-green-700 dark:text-green-300'
-                                    : 'text-red-700 dark:text-red-300'
-                                }`}>
-                                  {Math.round((beds.filter(b => b.type === 'icu' && b.status === 'available').length / Math.max(beds.filter(b => b.type === 'icu').length, 1)) * 100)}%
-                                </Text>
-                              </View>
+                              <Ionicons name="medical" size={20} color="#ef4444" />
+                              <Text className="ml-2 text-gray-900 dark:text-white font-semibold text-base">ICU Beds</Text>
                             </View>
                           </View>
-                          <View className="flex-row items-center">
-                            <View className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                              <View 
-                                className="bg-red-500 h-2.5 rounded-full" 
-                                style={{ 
-                                  width: `${beds.filter(b => b.type === 'icu').length > 0 ? (beds.filter(b => b.type === 'icu' && b.status === 'available').length / beds.filter(b => b.type === 'icu').length) * 100 : 0}%` 
-                                }} 
-                              />
-                            </View>
+                          
+                          <View className="flex-row items-center justify-between">
+                            <Text className="text-sm text-gray-600 dark:text-gray-400">
+                              Available
+                            </Text>
+                            <Text className="text-gray-900 dark:text-white font-semibold">
+                              {hospitalBeds.filter(b => b.type === 'icu' && b.status === 'available').length} / {hospitalBeds.filter(b => b.type === 'icu').length}
+                            </Text>
                           </View>
                         </View>
                       )}
@@ -999,8 +1060,64 @@ export default function PatientHome() {
                         </Text>
                       </View>
                     </View>
+
+                    {/* Available Beds List */}
+                    {hospitalBeds.length > 0 && (
+                      <View className="mt-4">
+                        <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                          Available Beds Details
+                        </Text>
+                        <View className="space-y-2">
+                          {hospitalBeds.filter(b => b.status === 'available').slice(0, 10).map((bed) => (
+                            <View
+                              key={bed.id}
+                              className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+                            >
+                              <View className="flex-row items-center justify-between">
+                                <View className="flex-1">
+                                  <View className="flex-row items-center mb-1">
+                                    <Ionicons 
+                                      name={bed.type === 'icu' ? 'medical' : 'bed'} 
+                                      size={16} 
+                                      color={bed.type === 'icu' ? '#ef4444' : '#3b82f6'} 
+                                    />
+                                    <Text className="ml-2 text-gray-900 dark:text-white font-semibold">
+                                      Bed {bed.bedNumber}
+                                    </Text>
+                                    {bed.type === 'icu' && (
+                                      <View className="ml-2 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded">
+                                        <Text className="text-red-800 dark:text-red-200 text-xs font-medium">
+                                          ICU
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                  <View className="flex-row items-center mt-1">
+                                    <Ionicons name="location" size={14} color="#6b7280" />
+                                    <Text className="ml-1 text-gray-600 dark:text-gray-400 text-sm">
+                                      Ward: {bed.ward}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                                  <Text className="text-green-700 dark:text-green-300 text-xs font-semibold">
+                                    Available
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                          ))}
+                          {hospitalBeds.filter(b => b.status === 'available').length > 10 && (
+                            <Text className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                              +{hospitalBeds.filter(b => b.status === 'available').length - 10} more beds available
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    )}
                   </View>
-                ) : (
+                  )
+                })() : (
                   <View className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                     <View className="flex-row items-center">
                       <View className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mr-3">
@@ -1059,6 +1176,66 @@ export default function PatientHome() {
                   </View>
                 </View>
               )}
+
+              {/* Staff Information */}
+              <View className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-4 border border-gray-200 dark:border-gray-700">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Hospital Staff
+                  </Text>
+                  <View className="bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                    <Text className="text-blue-700 dark:text-blue-300 text-sm font-semibold">
+                      {staff.length} Total
+                    </Text>
+                  </View>
+                </View>
+                
+                {staff.length === 0 ? (
+                  <Text className="text-gray-500 dark:text-gray-400 text-center py-4">
+                    Staff information not available
+                  </Text>
+                ) : (
+                  <View className="mt-3">
+                    {staff.slice(0, 10).map((staffMember) => (
+                      <View
+                        key={staffMember.id}
+                        className="flex-row items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+                      >
+                        <View className="flex-1">
+                          <Text className="text-gray-900 dark:text-white font-medium">
+                            {staffMember.name}
+                          </Text>
+                          <Text className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                            {staffMember.role.charAt(0).toUpperCase() + staffMember.role.slice(1)} • {staffMember.department.charAt(0).toUpperCase() + staffMember.department.slice(1)}
+                          </Text>
+                        </View>
+                        <View className={`px-2 py-1 rounded-full ${
+                          staffMember.status === 'active'
+                            ? 'bg-green-100 dark:bg-green-900/30'
+                            : staffMember.status === 'on_leave'
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                            : 'bg-gray-100 dark:bg-gray-700'
+                        }`}>
+                          <Text className={`text-xs font-semibold ${
+                            staffMember.status === 'active'
+                              ? 'text-green-700 dark:text-green-300'
+                              : staffMember.status === 'on_leave'
+                              ? 'text-yellow-700 dark:text-yellow-300'
+                              : 'text-gray-700 dark:text-gray-300'
+                          }`}>
+                            {staffMember.status === 'active' ? 'Active' : staffMember.status === 'on_leave' ? 'On Leave' : 'Inactive'}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                    {staff.length > 10 && (
+                      <Text className="text-gray-500 dark:text-gray-400 text-center mt-2 text-sm">
+                        +{staff.length - 10} more staff members
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
 
               {/* Action Buttons */}
               <View className="gap-3 mt-4 mb-8">
@@ -1208,7 +1385,7 @@ export default function PatientHome() {
               )}
 
               {/* Reason */}
-              <View className="mb-6">
+              <View className="mb-4">
                 <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Reason for Visit *</Text>
                 <TextInput
                   className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-gray-900 dark:text-white min-h-[100px]"
@@ -1222,6 +1399,57 @@ export default function PatientHome() {
                 />
               </View>
 
+              {/* Bed Number */}
+              <View className="mb-4">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Bed Number *</Text>
+                <TextInput
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 text-gray-900 dark:text-white"
+                  placeholder="Enter bed number (e.g., B-101, ICU-05)"
+                  placeholderTextColor="#9ca3af"
+                  value={bedNumber}
+                  onChangeText={setBedNumber}
+                />
+              </View>
+
+              {/* Bed Category */}
+              <View className="mb-6">
+                <Text className="text-gray-600 dark:text-gray-400 text-sm mb-2">Bed Category *</Text>
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    onPress={() => setBedCategory('general')}
+                    className={`flex-1 p-3 rounded-lg border-2 ${
+                      bedCategory === 'general'
+                        ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    <Text className={`text-center font-medium ${
+                      bedCategory === 'general'
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      General Bed
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setBedCategory('icu')}
+                    className={`flex-1 p-3 rounded-lg border-2 ${
+                      bedCategory === 'icu'
+                        ? 'border-red-600 bg-red-50 dark:bg-red-900/20'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                  >
+                    <Text className={`text-center font-medium ${
+                      bedCategory === 'icu'
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      ICU Bed
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <View className="flex-row gap-3">
                 <TouchableOpacity
                   onPress={() => {
@@ -1229,6 +1457,8 @@ export default function PatientHome() {
                     setAppointmentDate('')
                     setAppointmentTime('')
                     setAppointmentReason('')
+                    setBedNumber('')
+                    setBedCategory('general')
                   }}
                   className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-4 items-center"
                 >
@@ -1236,9 +1466,9 @@ export default function PatientHome() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleBookAppointment}
-                  disabled={!appointmentDate || !appointmentTime || !appointmentReason.trim() || loadingAppointment}
+                  disabled={!appointmentDate || !appointmentTime || !appointmentReason.trim() || !bedNumber.trim() || loadingAppointment}
                   className={`flex-1 rounded-lg p-4 items-center ${
-                    !appointmentDate || !appointmentTime || !appointmentReason.trim() || loadingAppointment
+                    !appointmentDate || !appointmentTime || !appointmentReason.trim() || !bedNumber.trim() || loadingAppointment
                       ? 'bg-gray-300 dark:bg-gray-600'
                       : 'bg-purple-600'
                   }`}

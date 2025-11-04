@@ -1,28 +1,23 @@
-import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useEffect } from 'react'
+import { View, Text, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/stores/authStore'
 import { useAppointmentsStore } from '@/stores/appointmentsStore'
 import { useCallStore } from '@/stores/callStore'
-import Button from '@/components/Button'
 import { Ionicons } from '@expo/vector-icons'
 import IncomingCall from '@/components/IncomingCall'
 import VideoCall from '@/components/VideoCall'
 
 export default function DoctorCalls() {
-  const router = useRouter()
   const { userData } = useAuthStore()
   const { appointments, subscribeToAppointments, isLoading } = useAppointmentsStore()
   const { 
-    initiateCall, 
     incomingCall, 
     currentCall, 
     subscribeToIncomingCalls,
     clearIncomingCall,
     setCurrentCall
   } = useCallStore()
-  const [isInitiatingCall, setIsInitiatingCall] = useState(false)
 
   useEffect(() => {
     if (userData?.uid) {
@@ -35,39 +30,6 @@ export default function DoctorCalls() {
       }
     }
   }, [userData?.uid, subscribeToAppointments, subscribeToIncomingCalls])
-
-  const handleStartCall = async (appointmentId: string, patientId: string, patientName: string) => {
-    if (!userData) return
-    
-    try {
-      setIsInitiatingCall(true)
-      const callId = await initiateCall(
-        patientId,
-        userData.uid,
-        patientName,
-        userData.displayName || 'Doctor',
-        appointmentId
-      )
-      
-      // Set current call to show calling interface
-      setCurrentCall({
-        id: callId,
-        patientId,
-        doctorId: userData.uid,
-        patientName,
-        doctorName: userData.displayName || 'Doctor',
-        appointmentId,
-        status: 'ringing',
-        startTime: new Date() as any,
-        callType: 'video'
-      })
-      
-    } catch (error) {
-      Alert.alert('Error', 'Failed to start call. Please try again.')
-    } finally {
-      setIsInitiatingCall(false)
-    }
-  }
 
   const handleAnswerCall = () => {
     // Call will be handled by the IncomingCall component
@@ -164,13 +126,11 @@ export default function DoctorCalls() {
                 <Ionicons name="videocam" size={24} color="#2563eb" />
               </View>
 
-              <Button
-                title={isInitiatingCall ? "Calling..." : "Start Video Call"}
-                onPress={() => handleStartCall(appointment.id, appointment.patientId, appointment.patientName)}
-                size="sm"
-                loading={isInitiatingCall}
-                disabled={isInitiatingCall}
-              />
+              <View className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
+                <Text className="text-center text-gray-600 dark:text-gray-400 text-sm">
+                  Waiting for patient to start call...
+                </Text>
+              </View>
             </View>
           ))
         )}

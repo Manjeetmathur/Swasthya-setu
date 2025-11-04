@@ -15,15 +15,16 @@ import * as ImagePicker from 'expo-image-picker'
 import { Ionicons } from '@expo/vector-icons'
 import { nutriScanService, ScanResult, UserProfile } from '@/lib/nutriScanService'
 import { useAuthStore } from '@/stores/authStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import * as Haptics from 'expo-haptics'
 
 export default function AIScan() {
   const router = useRouter()
   const { userData } = useAuthStore()
+  const { t } = useLanguageStore()
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isHindi, setIsHindi] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
   const [originalResult, setOriginalResult] = useState<ScanResult | null>(null)
 
@@ -39,7 +40,7 @@ export default function AIScan() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync()
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera access is needed to scan labels')
+        Alert.alert(t('aiscan.permission_required'), t('aiscan.camera_access_needed'))
         return
       }
 
@@ -54,7 +55,7 @@ export default function AIScan() {
         await processImage(result.assets[0].uri, result.assets[0].base64 || '')
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to take photo')
+      Alert.alert(t('aiscan.error'), t('aiscan.failed_to_take_photo'))
     }
   }
 
@@ -62,7 +63,7 @@ export default function AIScan() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Gallery access is needed')
+        Alert.alert(t('aiscan.permission_required'), t('aiscan.gallery_access_needed'))
         return
       }
 
@@ -77,14 +78,14 @@ export default function AIScan() {
         await processImage(result.assets[0].uri, result.assets[0].base64 || '')
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image')
+      Alert.alert(t('aiscan.error'), t('aiscan.failed_to_pick_image'))
     }
   }
 
 
   const processImage = async (imageUri: string, imageBase64: string) => {
     if (!imageBase64) {
-      Alert.alert('Error', 'Failed to process image')
+      Alert.alert(t('aiscan.error'), t('aiscan.failed_to_process'))
       return
     }
 
@@ -110,9 +111,8 @@ export default function AIScan() {
 
       setScanResult(result)
       setOriginalResult(result) // Store original for toggling
-      setIsHindi(false) // Reset to English on new scan
     } catch (error: any) {
-      Alert.alert('Analysis Failed', error.message || 'Failed to analyze label')
+      Alert.alert(t('aiscan.analysis_failed'), error.message || t('aiscan.failed_to_analyze'))
     } finally {
       setIsAnalyzing(false)
     }
@@ -124,18 +124,17 @@ export default function AIScan() {
     setIsTranslating(true)
 
     try {
-      if (isHindi) {
-        // Switch back to English
-        setScanResult(originalResult)
-        setIsHindi(false)
-      } else {
-        // Translate to Hindi
+      // Translate to Hindi if current language is English
+      const { language } = useLanguageStore.getState()
+      if (language === 'English') {
         const translatedResult = await nutriScanService.translateToHindi(originalResult)
         setScanResult(translatedResult)
-        setIsHindi(true)
+      } else {
+        // Switch back to English
+        setScanResult(originalResult)
       }
     } catch (error: any) {
-      Alert.alert('Translation Failed', error.message || 'Failed to translate')
+      Alert.alert(t('aiscan.translation_failed'), error.message || t('aiscan.failed_to_translate'))
     } finally {
       setIsTranslating(false)
     }
@@ -145,12 +144,11 @@ export default function AIScan() {
     setCapturedImage(null)
     setScanResult(null)
     setOriginalResult(null)
-    setIsHindi(false)
   }
 
   const handleShare = async () => {
     if (!scanResult) {
-      Alert.alert('Error', 'Nothing to share')
+      Alert.alert(t('aiscan.error'), t('aiscan.nothing_to_share'))
       return
     }
 
@@ -201,7 +199,7 @@ export default function AIScan() {
         message
       })
     } catch (error) {
-      Alert.alert('Error', 'Failed to share')
+      Alert.alert(t('aiscan.error'), t('aiscan.failed_to_share'))
     }
   }
 
@@ -232,12 +230,12 @@ export default function AIScan() {
               <Ionicons name="arrow-back" size={24} color="#1f2937" />
             </TouchableOpacity>
             <Text className="text-xl font-bold text-gray-900 dark:text-white">
-              AIScan
+              {t('aiscan.title')}
             </Text>
             <View style={{ width: 24 }} />
           </View>
           <Text className="text-sm text-gray-600 dark:text-gray-400 mt-2 text-center">
-            One scan. Zero risk. Eat safe.
+            {t('aiscan.subtitle')}
           </Text>
         </View>
 
@@ -250,10 +248,10 @@ export default function AIScan() {
                 <Ionicons name="scan" size={64} color="#3b82f6" />
               </View>
               <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Scan Food Label or Medicine
+                {t('aiscan.scan_food_label')}
               </Text>
               <Text className="text-gray-600 dark:text-gray-400 text-center mb-8 px-4">
-                Scan food labels or medicine packets. AI reads ingredients/medicine info in 3 seconds.
+                {t('aiscan.scan_description')}
               </Text>
 
               <TouchableOpacity
@@ -262,7 +260,7 @@ export default function AIScan() {
               >
                 <Ionicons name="camera" size={24} color="#fff" />
                 <Text className="text-white font-semibold text-lg mt-2">
-                  Take Photo
+                  {t('aiscan.take_photo')}
                 </Text>
               </TouchableOpacity>
 
@@ -272,7 +270,7 @@ export default function AIScan() {
               >
                 <Ionicons name="images" size={24} color="#1f2937" />
                 <Text className="text-gray-900 dark:text-white font-semibold text-lg mt-2">
-                  Choose from Gallery
+                  {t('aiscan.choose_from_gallery')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -281,10 +279,10 @@ export default function AIScan() {
             <View className="items-center mt-12">
               <ActivityIndicator size="large" color="#3b82f6" />
               <Text className="text-gray-900 dark:text-white text-lg font-semibold mt-4">
-                Analyzing label...
+                {t('aiscan.analyzing_label')}
               </Text>
               <Text className="text-gray-600 dark:text-gray-400 text-center mt-2">
-                AI is reading ingredients and checking for allergens
+                {t('aiscan.analyzing_description')}
               </Text>
             </View>
           ) : scanResult ? (
@@ -305,19 +303,19 @@ export default function AIScan() {
                   disabled={isTranslating}
                   className={`bg-green-600 dark:bg-green-700 rounded-lg px-4 py-3 flex-row items-center ${
                     isTranslating ? 'opacity-50' : ''
-                  } ${isHindi ? 'bg-blue-600 dark:bg-blue-700' : ''}`}
+                  }`}
                 >
                   {isTranslating ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <>
                       <Ionicons 
-                        name={isHindi ? "return-down-back" : "language"} 
+                        name="language" 
                         size={20} 
                         color="#fff" 
                       />
                       <Text className="text-white font-semibold ml-2">
-                        {isHindi ? 'English' : 'हिंदी'}
+                        {useLanguageStore.getState().language === 'English' ? t('aiscan.hindi') : t('aiscan.english')}
                       </Text>
                     </>
                   )}
@@ -334,7 +332,7 @@ export default function AIScan() {
                     </Text>
                     {scanResult.medicineInfo.genericName && (
                       <Text className="text-blue-700 dark:text-blue-300 text-sm">
-                        Generic: {scanResult.medicineInfo.genericName}
+                        {t('aiscan.generic')}: {scanResult.medicineInfo.genericName}
                       </Text>
                     )}
                   </View>
@@ -345,7 +343,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="medical" size={20} color="#3b82f6" />
                         <Text className="text-gray-900 dark:text-white font-semibold text-lg ml-2">
-                          Uses / Indications
+                          {t('aiscan.uses_indications')}
                         </Text>
                       </View>
                       {scanResult.medicineInfo.uses.map((use, idx) => (
@@ -356,7 +354,7 @@ export default function AIScan() {
                       {scanResult.medicineInfo.indications.length > 0 && (
                         <>
                           <Text className="text-gray-600 dark:text-gray-400 text-xs mt-2 mb-1 font-semibold">
-                            Indications:
+                            {t('aiscan.indications')}:
                           </Text>
                           {scanResult.medicineInfo.indications.map((ind, idx) => (
                             <Text key={idx} className="text-gray-700 dark:text-gray-300 text-sm mb-1">
@@ -374,7 +372,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="flask" size={20} color="#10b981" />
                         <Text className="text-gray-900 dark:text-white font-semibold text-lg ml-2">
-                          Dosage
+                          {t('aiscan.dosage')}
                         </Text>
                       </View>
                       <Text className="text-gray-700 dark:text-gray-300 text-sm">
@@ -389,7 +387,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="warning" size={20} color="#ef4444" />
                         <Text className="text-red-800 dark:text-red-300 font-semibold text-lg ml-2">
-                          Side Effects
+                          {t('aiscan.side_effects')}
                         </Text>
                       </View>
                       {scanResult.medicineInfo.sideEffects.map((effect, idx) => (
@@ -406,7 +404,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="close-circle" size={20} color="#f59e0b" />
                         <Text className="text-amber-800 dark:text-amber-300 font-semibold text-lg ml-2">
-                          Contraindications
+                          {t('aiscan.contraindications')}
                         </Text>
                       </View>
                       {scanResult.medicineInfo.contraindications.map((contra, idx) => (
@@ -423,7 +421,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="checkmark-circle" size={20} color="#10b981" />
                         <Text className="text-green-800 dark:text-green-300 font-semibold text-lg ml-2">
-                          Expected Results
+                          {t('aiscan.expected_results')}
                         </Text>
                       </View>
                       <Text className="text-green-700 dark:text-green-400 text-sm">
@@ -438,7 +436,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="shield" size={20} color="#f59e0b" />
                         <Text className="text-yellow-800 dark:text-yellow-300 font-semibold text-lg ml-2">
-                          Precautions
+                          {t('aiscan.precautions')}
                         </Text>
                       </View>
                       {scanResult.medicineInfo.precautions.map((prec, idx) => (
@@ -455,7 +453,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="alert-circle" size={20} color="#f97316" />
                         <Text className="text-orange-800 dark:text-orange-300 font-semibold text-lg ml-2">
-                          Drug Interactions
+                          {t('aiscan.drug_interactions')}
                         </Text>
                       </View>
                       {scanResult.medicineInfo.interactions.map((interaction, idx) => (
@@ -477,7 +475,7 @@ export default function AIScan() {
                       <View className="flex-row items-center mb-2">
                         <Ionicons name="warning" size={24} color="#ef4444" />
                         <Text className="text-red-600 dark:text-red-400 font-bold text-xl ml-2">
-                          DANGER - DO NOT EAT
+                          {t('aiscan.danger_not_eat')}
                         </Text>
                       </View>
                       {scanResult.allergens
@@ -490,7 +488,7 @@ export default function AIScan() {
                               color="#ef4444"
                             />
                             <Text className="text-red-700 dark:text-red-300 ml-2 font-semibold">
-                              Contains: {allergen.allergen} ({allergen.severity} risk)
+                              {t('aiscan.contains')}: {allergen.allergen} ({allergen.severity} {t('aiscan.risk')})
                             </Text>
                           </View>
                         ))}
@@ -503,7 +501,7 @@ export default function AIScan() {
                       <View className="flex-row items-center">
                         <Ionicons name="checkmark-circle" size={24} color="#10b981" />
                         <Text className="text-green-600 dark:text-green-400 font-bold text-xl ml-2">
-                          SAFE TO EAT
+                          {t('aiscan.safe_to_eat')}
                         </Text>
                       </View>
                     </View>
@@ -515,7 +513,7 @@ export default function AIScan() {
               {scanResult.scanType === 'food' && (
                 <View className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-4">
                   <Text className="text-gray-900 dark:text-white font-semibold text-lg mb-2">
-                    Nutrition Score
+                    {t('aiscan.nutrition_score')}
                   </Text>
                   <View className="flex-row items-center">
                     <View
@@ -528,7 +526,7 @@ export default function AIScan() {
                     </View>
                     <View className="ml-4 flex-1">
                       <Text className="text-gray-600 dark:text-gray-400 text-sm">
-                        Score: {scanResult.nutritionScore.score}/100
+                        {t('aiscan.score')}: {scanResult.nutritionScore.score}/100
                       </Text>
                       {scanResult.nutritionScore.reasons.length > 0 && (
                         <Text className="text-gray-700 dark:text-gray-300 text-sm mt-1">
@@ -544,7 +542,7 @@ export default function AIScan() {
               {scanResult.scanType === 'food' && scanResult.ingredients.length > 0 && (
                 <View className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-4">
                   <Text className="text-gray-900 dark:text-white font-semibold text-lg mb-2">
-                    Ingredients
+                    {t('aiscan.ingredients')}
                   </Text>
                   <Text className="text-gray-700 dark:text-gray-300 text-sm">
                     {scanResult.ingredients.join(', ')}
@@ -556,7 +554,7 @@ export default function AIScan() {
               {scanResult.warnings.length > 0 && (
                 <View className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-500 p-4 mb-4">
                   <Text className="text-yellow-800 dark:text-yellow-300 font-semibold mb-2">
-                    Warnings
+                    {t('aiscan.warnings')}
                   </Text>
                   {scanResult.warnings.map((warning, idx) => (
                     <Text
@@ -573,7 +571,7 @@ export default function AIScan() {
               {scanResult.scanType === 'food' && scanResult.safeAlternatives.length > 0 && (
                 <View className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-500 p-4 mb-4">
                   <Text className="text-blue-800 dark:text-blue-300 font-semibold mb-2">
-                    Safe Alternatives
+                    {t('aiscan.safe_alternatives')}
                   </Text>
                   {scanResult.safeAlternatives.map((alt, idx) => (
                     <Text
@@ -593,7 +591,7 @@ export default function AIScan() {
                   className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-lg py-3 items-center"
                 >
                   <Text className="text-gray-900 dark:text-white font-semibold">
-                    Scan Another
+                    {t('aiscan.scan_another')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -601,7 +599,7 @@ export default function AIScan() {
                   className="flex-1 bg-blue-600 dark:bg-blue-700 rounded-lg py-3 items-center"
                 >
                   <Ionicons name="share" size={20} color="#fff" />
-                  <Text className="text-white font-semibold mt-1">Share</Text>
+                  <Text className="text-white font-semibold mt-1">{t('aiscan.share')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
