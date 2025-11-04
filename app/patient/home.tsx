@@ -541,6 +541,36 @@ export default function PatientHome() {
             </Text>
             <View className="gap-3">
               <TouchableOpacity
+                className="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-blue-200 dark:border-blue-800 shadow-md"
+                style={{
+                  shadowColor: '#3b82f6',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 4
+                }}
+                onPress={() => router.push('/patient/ai-doctor')}
+              >
+                <View className="flex-row items-center">
+                  <View className="bg-blue-100 dark:bg-blue-900/30 rounded-xl p-2.5 mr-3">
+                    <Ionicons name="medical" size={24} color="#3b82f6" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-900 dark:text-white font-bold text-base mb-0.5">
+                      AI Doctor
+                    </Text>
+                    <Text className="text-gray-600 dark:text-gray-400 text-xs">
+                      Chat with AI doctor for health guidance
+                    </Text>
+                    <Text className="text-gray-500 dark:text-gray-500 text-xs mt-0.5">
+                      Ask questions • Get medical advice
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
                 className="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-orange-200 dark:border-orange-800 shadow-md"
                 style={{
                   shadowColor: '#f97316',

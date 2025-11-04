@@ -99,27 +99,7 @@ export default function RoleSelection() {
               </View>
             </TouchableOpacity>
 
-            {/* Prescription Analysis Section */}
-            <TouchableOpacity
-              onPress={() => router.push('/prescription-analysis')}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-orange-100 dark:border-gray-700 active:scale-95"
-              activeOpacity={0.9}
-            >
-              <View className="flex-row items-center">
-                <View className="bg-orange-500 p-4 rounded-xl mr-4">
-                  <Ionicons name="document-text" size={28} color="white" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                    Prescription Analysis
-                  </Text>
-                  <Text className="text-gray-600 dark:text-gray-400">
-                    Get instant insights about your medications without login
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#6b7280" />
-              </View>
-            </TouchableOpacity>
+           
           </View>
         </View>
 

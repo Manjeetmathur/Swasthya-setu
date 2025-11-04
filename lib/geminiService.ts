@@ -20,24 +20,24 @@ export interface MedicineSuggestion {
 }
 
 class GeminiMedicalService {
-  // Try Gemini 2.0 Flash, fallback to 1.5 Flash if not available
+  // Use Gemini 2.0 Flash as primary model
   private getModel() {
-    // Try different model names in order of preference
+    // Model priority: Gemini 2.0 Flash Experimental (most commonly available)
     const models = [
-      'gemini-2.0-flash-exp', // Experimental version
-      'gemini-2.0-flash',      // Stable version
-      'gemini-1.5-flash',      // Fallback to stable 1.5 Flash
+      'gemini-2.0-flash-exp',  // Primary: Gemini 2.0 Flash Experimental
+      'gemini-2.0-flash',      // Fallback: Stable Gemini 2.0 Flash
+      'gemini-1.5-flash',      // Fallback: Stable 1.5 Flash
       'gemini-1.5-pro'         // Last resort fallback
     ]
     
     // Return model configuration - actual availability will be checked when used
     return genAI.getGenerativeModel({ 
-      model: models[0], // Start with the first one
+      model: models[0], // Start with Gemini 2.0 Flash Experimental
       generationConfig: {
         temperature: 0.7,
         topP: 0.9,
         topK: 40,
-        maxOutputTokens: 500, // Reduced to keep responses concise
+        maxOutputTokens: 800, // Increased for doctor mode to allow more detailed responses
       }
     })
   }
@@ -47,40 +47,77 @@ class GeminiMedicalService {
   // Helper to try different models if one fails
   private async tryGenerateContent(prompt: string, retryCount = 0): Promise<any> {
     const models = [
-      'gemini-2.0-flash-exp',
-      'gemini-2.0-flash',
-      'gemini-1.5-pro'
+      'gemini-2.0-flash-exp',   // Primary: Gemini 2.0 Flash Experimental (most available)
+      'gemini-2.0-flash',      // Fallback: Stable Gemini 2.0 Flash
+      'gemini-1.5-flash',      // Fallback: Stable 1.5 Flash
+      'gemini-1.5-pro'         // Last resort fallback
     ]
     
     try {
       const modelToUse = models[retryCount] || models[models.length - 1]
+      console.log(`[Gemini] Attempting to use model: ${modelToUse}`)
+      
       const model = genAI.getGenerativeModel({ 
         model: modelToUse,
         generationConfig: {
           temperature: 0.7,
           topP: 0.9,
           topK: 40,
-          maxOutputTokens: 500,
+          maxOutputTokens: 800,
         }
       })
       
-      return await model.generateContent(prompt)
+      const result = await model.generateContent(prompt)
+      console.log(`[Gemini] Successfully used model: ${modelToUse}`)
+      return result
     } catch (error: any) {
+      console.error(`[Gemini] Model ${models[retryCount]} failed:`, error?.message || error)
+      
       // If we have more models to try, retry with next model
       if (retryCount < models.length - 1) {
-        console.log(`Model ${models[retryCount]} not available, trying ${models[retryCount + 1]}`)
+        console.log(`[Gemini] Trying next model: ${models[retryCount + 1]}`)
         return this.tryGenerateContent(prompt, retryCount + 1)
       }
-      // If all models failed, throw the error
+      // If all models failed, throw the error with more details
+      console.error(`[Gemini] All models failed. Last error:`, error)
       throw error
     }
   }
 
-  async getMedicalResponse(query: string, mode: 'medicine' | 'symptoms' | 'health-tips' = 'medicine'): Promise<MedicalResponse> {
+  async getMedicalResponse(query: string, mode: 'medicine' | 'symptoms' | 'health-tips' | 'doctor' = 'medicine'): Promise<MedicalResponse> {
     try {
       let prompt = ''
       
-      if (mode === 'medicine') {
+      if (mode === 'doctor') {
+        prompt = `You are a compassionate, knowledgeable, and professional AI doctor. You provide medical guidance, answer health questions, and help patients understand their conditions in a caring and empathetic manner.
+
+User question: "${query}"
+
+Role: Act as a doctor would in a consultation. Be:
+- Professional yet warm and empathetic
+- Clear and concise in explanations
+- Supportive and encouraging
+- Cautious about providing medical advice (always recommend consulting with a real doctor for serious conditions)
+- Helpful in explaining medical terms in simple language
+
+Guidelines:
+- Listen carefully to the patient's concerns
+- Ask clarifying questions if needed (but be concise)
+- Provide general medical information and guidance
+- Explain symptoms, conditions, or treatments when appropriate
+- Always emphasize when professional medical consultation is needed
+- Use **bold** for important points or warnings
+- Be conversational but professional
+
+IMPORTANT: 
+- This is NOT a replacement for real medical consultation
+- For serious symptoms, emergencies, or ongoing conditions, always recommend seeing a healthcare professional
+- Never provide definitive diagnoses - only guidance and information
+- Keep responses helpful but not overly long (3-5 sentences typically)
+
+End with appropriate disclaimers when discussing medical conditions or treatments.`
+
+      } else if (mode === 'medicine') {
         prompt = `You are a medicine information specialist. Provide concise information about medicines ONLY.
 
 User question: "${query}"
@@ -167,8 +204,8 @@ End with: "**Note:** These are general tips. Consult a healthcare professional f
       })
       
       // More helpful error messages
-      if (error?.message?.includes('model') || error?.message?.includes('not found')) {
-        throw new Error('All Gemini models are unavailable. Please check your API key and ensure you have access to at least one Gemini model (gemini-1.5-flash or gemini-1.5-pro).')
+      if (error?.message?.includes('model') || error?.message?.includes('not found') || error?.message?.includes('404')) {
+        throw new Error(`Gemini model unavailable. Error: ${error?.message}. Please check your API key and ensure you have access to Gemini 2.0 Flash or Gemini 1.5 models.`)
       }
       if (error?.message?.includes('API key') || error?.status === 401) {
         throw new Error('Invalid API key. Please check your EXPO_PUBLIC_GEMINI_API_KEY.')
