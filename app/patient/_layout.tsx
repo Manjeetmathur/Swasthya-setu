@@ -137,9 +137,9 @@ export default function PatientLayout() {
       <Tabs.Screen
         name="nutri-scan"
         options={{
-          title: 'AIScan',
+          title: 'AI-Care',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="scan" size={size} color={color} />
+            <Ionicons name="medical" size={size} color={color} />
           )
         }}
       />

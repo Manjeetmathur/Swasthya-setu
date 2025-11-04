@@ -37,32 +37,70 @@ export default function QuickActionsSection({ onHospitalSelect }: QuickActionsSe
 
   return (
     <>
-      <View className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
-        <Text className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+      <View className="mb-6">
+        <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
           {t('home.quick_actions')}
         </Text>
         <View className="flex-row gap-3 mb-3">
           <TouchableOpacity
-            className="flex-1 bg-purple-600 rounded-lg p-4 items-center"
+            className="flex-1 bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-5 items-center shadow-lg"
+            style={{
+              backgroundColor: '#9333ea',
+              shadowColor: '#9333ea',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8
+            }}
             onPress={() => setShowHospitalModal(true)}
           >
-            <Ionicons name="business-outline" size={24} color="#ffffff" />
-            <Text className="text-white font-semibold mt-2">{t('home.hospitals')}</Text>
+            <View className="bg-white/20 rounded-full p-3 mb-2">
+              <Ionicons name="business" size={28} color="#ffffff" />
+            </View>
+            <Text className="text-white font-bold text-base mt-1">{t('home.hospitals')}</Text>
+            <Text className="text-white/80 text-xs mt-1">Find & book</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 bg-blue-600 rounded-lg p-4 items-center"
+            className="flex-1 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-5 items-center shadow-lg"
+            style={{
+              backgroundColor: '#2563eb',
+              shadowColor: '#2563eb',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8
+            }}
             onPress={() => setShowDoctorModal(true)}
           >
-            <Ionicons name="medical-outline" size={24} color="#ffffff" />
-            <Text className="text-white font-semibold mt-2">{t('home.doctors')}</Text>
+            <View className="bg-white/20 rounded-full p-3 mb-2">
+              <Ionicons name="medical" size={28} color="#ffffff" />
+            </View>
+            <Text className="text-white font-bold text-base mt-1">{t('home.doctors')}</Text>
+            <Text className="text-white/80 text-xs mt-1">Consult now</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity
-          className="bg-green-600 rounded-lg p-4 items-center"
+          className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-5 items-center shadow-lg"
+          style={{
+            backgroundColor: '#16a34a',
+            shadowColor: '#16a34a',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8
+          }}
           onPress={() => router.push('/patient/diseases')}
         >
-          <Ionicons name="medical" size={24} color="#ffffff" />
-          <Text className="text-white font-semibold mt-2">{t('home.diseases_cures')}</Text>
+          <View className="flex-row items-center">
+            <View className="bg-white/20 rounded-full p-2 mr-3">
+              <Ionicons name="library" size={24} color="#ffffff" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-bold text-base">{t('home.diseases_cures')}</Text>
+              <Text className="text-white/80 text-xs">Health encyclopedia</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ffffff" />
+          </View>
         </TouchableOpacity>
       </View>
 

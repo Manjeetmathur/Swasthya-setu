@@ -221,58 +221,147 @@ export default function AIScan() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
-      <ScrollView className="flex-1">
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-          <View className="flex-row items-center justify-between">
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color="#1f2937" />
-            </TouchableOpacity>
-            <Text className="text-xl font-bold text-gray-900 dark:text-white">
-              {t('aiscan.title')}
-            </Text>
-            <View style={{ width: 24 }} />
+        <View className="px-6 py-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-gray-900 dark:text-white">
+                AI-Care
+              </Text>
+              <Text className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Your AI-powered health companion
+              </Text>
+            </View>
           </View>
-          <Text className="text-sm text-gray-600 dark:text-gray-400 mt-2 text-center">
-            {t('aiscan.subtitle')}
+        </View>
+
+        {/* AI Health Assistant Options */}
+        <View className="px-6 py-6">
+          <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            AI Health Assistant
+          </Text>
+          
+          <View className="flex-row gap-3 mb-6">
+            <TouchableOpacity
+              className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 border border-purple-200 dark:border-purple-800 shadow-sm"
+              style={{
+                shadowColor: '#8b5cf6',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                elevation: 3
+              }}
+              onPress={() => router.push('/patient/medicine-info')}
+            >
+              <View className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 mb-3 items-center">
+                <Ionicons name="medical" size={28} color="#8b5cf6" />
+              </View>
+              <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1 text-center">
+                Medicine Info
+              </Text>
+              <Text className="text-gray-600 dark:text-gray-400 text-xs text-center">
+                Uses & side effects
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 border border-blue-200 dark:border-blue-800 shadow-sm"
+              style={{
+                shadowColor: '#3b82f6',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                elevation: 3
+              }}
+              onPress={() => router.push('/patient/symptoms-check')}
+            >
+              <View className="bg-blue-100 dark:bg-blue-900/30 rounded-xl p-3 mb-3 items-center">
+                <Ionicons name="pulse" size={28} color="#3b82f6" />
+              </View>
+              <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1 text-center">
+                Symptoms Check
+              </Text>
+              <Text className="text-gray-600 dark:text-gray-400 text-xs text-center">
+                Health guidance
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 border border-green-200 dark:border-green-800 shadow-sm"
+              style={{
+                shadowColor: '#10b981',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                elevation: 3
+              }}
+              onPress={() => router.push('/patient/health-tips')}
+            >
+              <View className="bg-green-100 dark:bg-green-900/30 rounded-xl p-3 mb-3 items-center">
+                <Ionicons name="heart" size={28} color="#10b981" />
+              </View>
+              <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1 text-center">
+                Health Tips
+              </Text>
+              <Text className="text-gray-600 dark:text-gray-400 text-xs text-center">
+                Wellness advice
+            </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* AI-Powered Scanning Section */}
+          <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            AI-Powered Scanning
           </Text>
         </View>
 
         {/* Main Content */}
-        <View className="px-6 py-6">
+        <View className="px-6 pb-6">
           {!capturedImage && !scanResult ? (
             // Initial Screen
-            <View className="items-center mt-12">
-              <View className="w-32 h-32 rounded-full bg-blue-100 dark:bg-blue-900 items-center justify-center mb-6">
-                <Ionicons name="scan" size={64} color="#3b82f6" />
+            <View className="items-center mt-8">
+              <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-orange-200 dark:border-orange-800 shadow-md w-full">
+                <View className="items-center mb-4">
+                  <View className="bg-orange-100 dark:bg-orange-900/30 rounded-2xl p-4 mb-4">
+                    <Ionicons name="scan" size={48} color="#f97316" />
               </View>
-              <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2 text-center">
                 {t('aiscan.scan_food_label')}
               </Text>
-              <Text className="text-gray-600 dark:text-gray-400 text-center mb-8 px-4">
+                  <Text className="text-gray-600 dark:text-gray-400 text-center mb-4 px-4">
                 {t('aiscan.scan_description')}
               </Text>
+                </View>
 
               <TouchableOpacity
                 onPress={handleTakePhoto}
-                className="w-full bg-blue-600 dark:bg-blue-700 rounded-lg py-4 items-center mb-4"
+                  className="w-full bg-orange-600 rounded-2xl py-4 items-center mb-3 shadow-lg"
+                  style={{
+                    shadowColor: '#f97316',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 8
+                  }}
               >
-                <Ionicons name="camera" size={24} color="#fff" />
-                <Text className="text-white font-semibold text-lg mt-2">
+                  <Ionicons name="camera" size={28} color="#fff" />
+                  <Text className="text-white font-bold text-lg mt-2">
                   {t('aiscan.take_photo')}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={handlePickFromGallery}
-                className="w-full bg-gray-200 dark:bg-gray-700 rounded-lg py-4 items-center"
+                  className="w-full bg-white dark:bg-gray-700 border-2 border-orange-300 dark:border-orange-700 rounded-2xl py-4 items-center"
               >
-                <Ionicons name="images" size={24} color="#1f2937" />
-                <Text className="text-gray-900 dark:text-white font-semibold text-lg mt-2">
+                  <Ionicons name="images" size={28} color="#f97316" />
+                  <Text className="text-gray-900 dark:text-white font-bold text-lg mt-2">
                   {t('aiscan.choose_from_gallery')}
                 </Text>
               </TouchableOpacity>
+              </View>
             </View>
           ) : isAnalyzing ? (
             // Analyzing

@@ -521,72 +521,112 @@ export default function PatientHome() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900">
       <ScrollView
         className="flex-1"
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        <View className="px-6 py-4">
+        <View className="px-6 py-6">
           <HomeHeader userName={userData?.displayName || undefined} />
 
           <QuickActionsSection onHospitalSelect={handleHospitalPress} />
 
-          {/* AIScan and MediMind Section */}
+          {/* AI-Powered Features Section */}
           <View className="mb-6">
+            <Text className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              AI-Powered Features
+            </Text>
             <View className="gap-3">
               <TouchableOpacity
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-orange-400 dark:border-orange-600"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-orange-200 dark:border-orange-800 shadow-md"
+                style={{
+                  shadowColor: '#f97316',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 4
+                }}
                 onPress={() => router.push('/patient/nutri-scan')}
               >
                 <View className="flex-row items-center">
-                  <Ionicons name="scan" size={28} color="#f97316" />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-gray-900 dark:text-white font-bold text-base">
-                      AIScan
+                  <View className="bg-orange-100 dark:bg-orange-900/30 rounded-xl p-2.5 mr-3">
+                    <Ionicons name="scan" size={24} color="#f97316" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-900 dark:text-white font-bold text-base mb-0.5">
+                      AI-Care
                     </Text>
-                    <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-                      Scan food labels & medicine packets • Detect allergens • Side effects
+                    <Text className="text-gray-600 dark:text-gray-400 text-xs">
+                      Scan food labels & medicine packets
+                    </Text>
+                    <Text className="text-gray-500 dark:text-gray-500 text-xs mt-0.5">
+                      Detect allergens • Side effects
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                  <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
                 </View>
               </TouchableOpacity>
               
               <TouchableOpacity
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-purple-400 dark:border-purple-600"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-purple-200 dark:border-purple-800 shadow-md"
+                style={{
+                  shadowColor: '#a855f7',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 4
+                }}
                 onPress={() => router.push('/patient/skin-rash')}
               >
                 <View className="flex-row items-center">
-                  <Ionicons name="medical" size={28} color="#a855f7" />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-gray-900 dark:text-white font-bold text-base">
+                  <View className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-2.5 mr-3">
+                    <Ionicons name="medical" size={24} color="#a855f7" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-900 dark:text-white font-bold text-base mb-0.5">
                       Skin Rash Detection
                     </Text>
-                    <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-                      AI dermatology analysis • Identify conditions • Get recommendations
+                    <Text className="text-gray-600 dark:text-gray-400 text-xs">
+                      AI dermatology analysis
+                    </Text>
+                    <Text className="text-gray-500 dark:text-gray-500 text-xs mt-0.5">
+                      Identify conditions • Get recommendations
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                  <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
                 </View>
               </TouchableOpacity>
               
               <TouchableOpacity
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-purple-400 dark:border-purple-600"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-3.5 border border-indigo-200 dark:border-indigo-800 shadow-md"
+                style={{
+                  shadowColor: '#6366f1',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 4
+                }}
                 onPress={() => router.push('/patient/medimind')}
               >
                 <View className="flex-row items-center">
-                  <Ionicons name="mic" size={28} color="#a855f7" />
-                  <View className="ml-3 flex-1">
-                    <Text className="text-gray-900 dark:text-white font-bold text-base">
+                  <View className="bg-indigo-100 dark:bg-indigo-900/30 rounded-xl p-2.5 mr-3">
+                    <Ionicons name="mic" size={24} color="#6366f1" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-900 dark:text-white font-bold text-base mb-0.5">
                       MediMind
                     </Text>
-                    <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-                      Voice therapy • Detect depression • Connect to therapist
+                    <Text className="text-gray-600 dark:text-gray-400 text-xs">
+                      Voice therapy & mental health
+                    </Text>
+                    <Text className="text-gray-500 dark:text-gray-500 text-xs mt-0.5">
+                      Detect depression • Connect to therapist
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                  <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
                 </View>
               </TouchableOpacity>
             </View>

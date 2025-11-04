@@ -48,47 +48,72 @@ export default function ServicesSection({
           {t('home.ai_health_assistant')}
         </Text>
 
-        <View className="gap-3">
         <View className="flex-row gap-3">
           <TouchableOpacity
-            className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-800"
+            className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 border border-purple-200 dark:border-purple-800 shadow-sm"
+            style={{
+              shadowColor: '#8b5cf6',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 6,
+              elevation: 3
+            }}
             onPress={() => router.push('/patient/medicine-info')}
           >
-            <Ionicons name="medical" size={24} color="#8b5cf6" />
-            <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
+            <View className="bg-purple-100 dark:bg-purple-900/30 rounded-xl p-3 mb-3 items-center">
+              <Ionicons name="medical" size={28} color="#8b5cf6" />
+            </View>
+            <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1 text-center">
               {t('home.medicine_info')}
             </Text>
-            <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+            <Text className="text-gray-600 dark:text-gray-400 text-xs text-center">
               {t('home.medicine_info_short')}
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-800"
+            className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 border border-blue-200 dark:border-blue-800 shadow-sm"
+            style={{
+              shadowColor: '#3b82f6',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 6,
+              elevation: 3
+            }}
             onPress={() => router.push('/patient/symptoms-check')}
           >
-            <Ionicons name="medical" size={24} color="#3b82f6" />
-            <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
+            <View className="bg-blue-100 dark:bg-blue-900/30 rounded-xl p-3 mb-3 items-center">
+              <Ionicons name="pulse" size={28} color="#3b82f6" />
+            </View>
+            <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1 text-center">
               {t('home.symptoms_check')}
             </Text>
-            <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+            <Text className="text-gray-600 dark:text-gray-400 text-xs text-center">
               {t('home.health_guidance')}
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            className="flex-1 bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-800"
+            className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 border border-green-200 dark:border-green-800 shadow-sm"
+            style={{
+              shadowColor: '#10b981',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 6,
+              elevation: 3
+            }}
             onPress={() => router.push('/patient/health-tips')}
           >
-            <Ionicons name="heart" size={24} color="#10b981" />
-            <Text className="text-gray-900 dark:text-white font-semibold mt-2 text-sm">
+            <View className="bg-green-100 dark:bg-green-900/30 rounded-xl p-3 mb-3 items-center">
+              <Ionicons name="heart" size={28} color="#10b981" />
+            </View>
+            <Text className="text-gray-900 dark:text-white font-bold text-sm mb-1 text-center">
               {t('home.health_tips')}
             </Text>
-            <Text className="text-gray-600 dark:text-gray-400 text-xs mt-1">
+            <Text className="text-gray-600 dark:text-gray-400 text-xs text-center">
               {t('home.wellness_advice')}
             </Text>
           </TouchableOpacity>
-          </View>
         </View>
       </View>
 
@@ -101,11 +126,12 @@ export default function ServicesSection({
           {hospitals.length > 0 && (
             <TouchableOpacity
               onPress={() => router.push('/patient/hospitals')}
-              className="0 dark:bg-purple-700 px-4 py-2 rounded-lg"
+              className="flex-row items-center"
             >
-              <Text className="text-black text-sm font-semibold">
+              <Text className="text-purple-600 dark:text-purple-400 text-sm font-semibold mr-1">
                 {t('home.view_all')}
               </Text>
+              <Ionicons name="chevron-forward" size={16} color="#9333ea" />
             </TouchableOpacity>
           )}
         </View>
@@ -124,24 +150,33 @@ export default function ServicesSection({
             {hospitals.slice(0, 2).map((hospital) => (
               <TouchableOpacity
                 key={hospital.id}
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-md mb-3"
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  elevation: 3
+                }}
                 onPress={() => onHospitalPress(hospital)}
               >
-                <View className="flex-row items-center mb-3">
-                  <View className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg mr-3">
-                    <Ionicons name="business" size={24} color="#8b5cf6" />
+                <View className="flex-row items-start mb-3">
+                  <View className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-xl mr-4">
+                    <Ionicons name="business" size={28} color="#8b5cf6" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-900 dark:text-white" numberOfLines={1}>
-                      {hospital.hospitalData.hospitalName}
-                    </Text>
-                    <Text className="text-sm text-gray-600 dark:text-gray-400">
+                    <View className="flex-row items-center mb-1">
+                      <Text className="text-lg font-bold text-gray-900 dark:text-white flex-1" numberOfLines={1}>
+                        {hospital.hospitalData.hospitalName}
+                      </Text>
+                      <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full ml-2">
+                        <Text className="text-xs font-semibold text-green-700 dark:text-green-300">
+                          {t('home.verified')}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                       {hospital.hospitalData.hospitalType}
-                    </Text>
-                  </View>
-                  <View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">
-                    <Text className="text-xs font-semibold text-green-700 dark:text-green-300">
-                      {t('home.verified')}
                     </Text>
                   </View>
                 </View>
