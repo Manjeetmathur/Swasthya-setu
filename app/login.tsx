@@ -366,12 +366,6 @@ export default function Login() {
               className="mb-4"
             />
 
-            <Button
-              title="Sign in with Google"
-              onPress={handleGoogleLogin}
-              variant="outline"
-              className="mb-4"
-            />
 
             <View className="flex-row justify-center mt-4">
               <Text className="text-gray-600 dark:text-gray-400">
@@ -385,14 +379,7 @@ export default function Login() {
               </Text>
             </View>
 
-            <View className="flex-row justify-center mt-6">
-              <Text
-                className="text-gray-400 text-xs"
-                onPress={() => router.push('/admin-setup')}
-              >
-                Admin Setup
-              </Text>
-            </View>
+            
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
